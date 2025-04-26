@@ -1,0 +1,85 @@
+name: CI Build-Publish native image with Quarkus CLI
+
+# Define the events that trigger the workflow
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (M.m.p)
+        required: true
+
+jobs:
+  docker:
+    # Define the operating systems and architectures to run the job on
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [amd64, arm64]
+    steps:
+      # Check out the repository
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      # Prepare metadata and timestamps
+      - name: Prepare
+        id: prep
+        run: |
+          echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      # Set up GraalVM environment
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '23.0.2'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.TOKEN_GITHUB }}
+          native-image-job-reports: 'true'
+
+      # Install JBang and Quarkus CLI
+      - name: Install JBang and Quarkus CLI
+        run: |
+          curl -Ls https://sh.jbang.dev | bash -s - trust add https://repo1.maven.org/maven2/io/quarkus/quarkus-cli/
+          curl -Ls https://sh.jbang.dev | bash -s - app install --fresh --force quarkus@quarkusio
+          echo "PATH=$PATH:/home/runner/.jbang/bin" >> $GITHUB_ENV
+
+      # Verify the installation of Quarkus CLI
+      - name: Verify Quarkus CLI installation
+        run: quarkus --version
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Log in to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      # Build the native artifact
+      - name: Build Native Artifact
+        run: |
+          quarkus build --native
+
+      # Build the native image and push the Docker image
+      - name: Build Native Image and Push Docker Image
+        run: |
+          quarkus image build --native \
+          -Dquarkus.native.additional-build-args=-march=native,-H:BuildOutputJSONFile=/tmp/native-image-build-output.json \
+          -Dquarkus.native.container-build=false \
+          -Dquarkus.container-image.push=true \
+          -Dquarkus.container-image.registry=docker.io \
+          -Dquarkus.container-image.username=${{ secrets.DOCKER_USERNAME }} \
+          -Dquarkus.container-image.image=${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}-native:${{ github.event.inputs.version }}-${{ matrix.platform }} \
+          -Dquarkus.container-image.additional-tags="latest-${{ matrix.platform }}" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.title\"="${{ github.event.repository.name }}" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.description\"="A native image built with Quarkus CLI" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.url\"="https://github.com/${{ github.repository }}" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.source\"="https://github.com/${{ github.repository }}" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.version\"="${{ github.event.inputs.version }}" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.created\"="${{ steps.prep.outputs.created }}" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.revision\"="${{ github.sha }}" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.authors\"="German Ulrich <gerulrich@gmail.com>" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.licenses\"="MIT"
