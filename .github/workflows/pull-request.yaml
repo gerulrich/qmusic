@@ -2,7 +2,7 @@ name: Test pull request
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   run-tests:
@@ -14,7 +14,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'amazon-corretto'
+          distribution: 'graalvm'
           cache: maven
 
       - name: Compile
