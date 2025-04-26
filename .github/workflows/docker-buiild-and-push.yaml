@@ -26,7 +26,7 @@ jobs:
         id: prep
         run: |
           echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
-          echo "image_name=${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}-native" >> $GITHUB_OUTPUT
+          echo "image_name=${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
 
       # Set up GraalVM environment
       - name: Set up GraalVM
@@ -83,8 +83,8 @@ jobs:
       - name: Build Native Image and Push Docker Image
         run: |
           echo "Building image for platform: ${{ matrix.platform }}"
-          IMAGE_TAG="${{ steps.prep.outputs.image_name }}:${{ github.event.inputs.version }}-${{ matrix.platform }}"
-          LATEST_TAG="${{ steps.prep.outputs.image_name }}:latest-${{ matrix.platform }}"
+          # We still build with platform suffix for internal reference
+          PLATFORM_TAG="${{ steps.prep.outputs.image_name }}:${{ github.event.inputs.version }}-${{ matrix.platform }}"
           
           # Build using Quarkus
           quarkus image build --native \
@@ -95,7 +95,6 @@ jobs:
           -Dquarkus.container-image.username=${{ secrets.DOCKER_USERNAME }} \
           -Dquarkus.container-image.password=${{ secrets.DOCKER_TOKEN }} \
           -Dquarkus.container-image.image=${{ steps.prep.outputs.image_name }}:${{ github.event.inputs.version }}-${{ matrix.platform }} \
-          -Dquarkus.container-image.additional-tags="latest-${{ matrix.platform }}" \
           -Dquarkus.container-image.labels.\"org.opencontainers.image.created\"="${{ steps.prep.outputs.created }}" \
           -Dquarkus.container-image.labels.\"org.opencontainers.image.revision\"="${{ github.sha }}"
           
@@ -105,14 +104,46 @@ jobs:
           
           # Push explicitly as a backup
           echo "Pushing image explicitly with Docker CLI:"
-          docker push ${IMAGE_TAG} || echo "Warning: Docker push via CLI failed"
-          docker push ${LATEST_TAG} || echo "Warning: Latest tag push via CLI failed"
+          docker push ${PLATFORM_TAG} || echo "Warning: Docker push via CLI failed"
 
-      # Verify push to Docker Hub
-      - name: Verify Push to Docker Hub
+  create-manifest:
+    needs: docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare
+        id: prep
         run: |
-          echo "Verifying push to Docker Hub for ${{ steps.prep.outputs.image_name }}"
-          # Can add commands to query Docker Hub API to verify the image exists
-          # For simple verification, you can just echo the image URL
-          echo "Image should be available at: docker.io/${{ steps.prep.outputs.image_name }}:${{ github.event.inputs.version }}-${{ matrix.platform }}"
-          echo "Latest tag should be available at: docker.io/${{ steps.prep.outputs.image_name }}:latest-${{ matrix.platform }}"
+          echo "image_name=${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}" >> $GITHUB_OUTPUT
+
+      # Log in to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Create and push Docker manifest for multi-arch support
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          IMAGE_NAME="${{ steps.prep.outputs.image_name }}"
+          
+          # Enable experimental features for manifest command
+          export DOCKER_CLI_EXPERIMENTAL=enabled
+          
+          # Create and push the version manifest
+          docker manifest create ${IMAGE_NAME}:${VERSION} \
+            ${IMAGE_NAME}:${VERSION}-amd64 \
+            ${IMAGE_NAME}:${VERSION}-arm64
+            
+          docker manifest push ${IMAGE_NAME}:${VERSION}
+          
+          # Create and push the latest manifest
+          docker manifest create ${IMAGE_NAME}:latest \
+            ${IMAGE_NAME}:${VERSION}-amd64 \
+            ${IMAGE_NAME}:${VERSION}-arm64
+            
+          docker manifest push ${IMAGE_NAME}:latest
+          
+          echo "Multi-architecture manifests created and pushed:"
+          echo "- ${IMAGE_NAME}:${VERSION}"
+          echo "- ${IMAGE_NAME}:latest"
