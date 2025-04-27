@@ -66,6 +66,10 @@ jobs:
           # We still build with platform suffix for internal reference
           PLATFORM_TAG="${{ steps.prep.outputs.image_name }}:${{ github.event.inputs.version }}-${{ matrix.platform }}"
           
+          # Define the platform specific arguments
+          DOCKER_PLATFORM="linux/${{ matrix.platform }}"
+          echo "Building for Docker platform: ${DOCKER_PLATFORM}"
+          
           # Build using Quarkus
           quarkus image build --native \
           -Dquarkus.native.container-build=false \
@@ -76,15 +80,22 @@ jobs:
           -Dquarkus.container-image.password=${{ secrets.DOCKER_TOKEN }} \
           -Dquarkus.container-image.image=${{ steps.prep.outputs.image_name }}:${{ github.event.inputs.version }}-${{ matrix.platform }} \
           -Dquarkus.container-image.labels.\"org.opencontainers.image.created\"="${{ steps.prep.outputs.created }}" \
-          -Dquarkus.container-image.labels.\"org.opencontainers.image.revision\"="${{ github.sha }}"
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.revision\"="${{ github.sha }}" \
+          -Dquarkus.container-image.additional-args="--platform=${DOCKER_PLATFORM}" \
+          -Dquarkus.container-image.labels.\"org.opencontainers.image.architecture\"="${{ matrix.platform }}"
           
           # Verify the image exists locally
           echo "Verifying local images:"
           docker images | grep ${{ steps.prep.outputs.image_name }}
           
-          # Push explicitly as a backup
+          # Push explicitly as a backup with platform annotation
           echo "Pushing image explicitly with Docker CLI:"
           docker push ${PLATFORM_TAG} || echo "Warning: Docker push via CLI failed"
+          
+          # Verify the architecture of the pushed image
+          echo "Verifying image architecture with Docker Hub API:"
+          TOKEN=$(curl -s -H "Content-Type: application/json" -X POST -d '{"username": "${{ secrets.DOCKER_USERNAME }}", "password": "${{ secrets.DOCKER_TOKEN }}"}' https://hub.docker.com/v2/users/login/ | jq -r .token)
+          curl -s -H "Authorization: JWT ${TOKEN}" https://hub.docker.com/v2/repositories/${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}/tags/${{ github.event.inputs.version }}-${{ matrix.platform }}/ | jq .
 
   create-manifest:
     needs: docker
