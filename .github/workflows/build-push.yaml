@@ -1,0 +1,34 @@
+name: Build qmusic and push to docker hub
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (M.m.p)
+        required: true
+
+jobs:
+  build:
+    name: push docker image to docker hub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            gerulrich/qmusic:${{github.event.inputs.version}},
+            gerulrich/qmusic:latest
+          platforms: linux/amd64,linux/arm64
