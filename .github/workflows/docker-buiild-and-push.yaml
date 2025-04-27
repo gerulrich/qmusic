@@ -75,6 +75,7 @@ jobs:
           -Dquarkus.native.container-build=false \
           -Dquarkus.container-image.build=true \
           -Dquarkus.container-image.push=true \
+          -Dquarkus.container-image.platform=linux/${{ matrix.platform }} \
           -Dquarkus.container-image.registry=docker.io \
           -Dquarkus.container-image.username=${{ secrets.DOCKER_USERNAME }} \
           -Dquarkus.container-image.password=${{ secrets.DOCKER_TOKEN }} \
