@@ -11,7 +11,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import quantum.music.client.OAuth2Client;
 import quantum.music.model.TokenResponse;
 
-import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
@@ -20,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static quantum.music.utils.ReflectionUtils.setValue;
 
 @ExtendWith(MockitoExtension.class)
 public class TokenServiceTest {
@@ -33,8 +33,8 @@ public class TokenServiceTest {
     @BeforeEach
     void setup() throws Exception {
         // Set the config properties using reflection
-        setFieldValue(tokenService, "clientId", "test-client-id");
-        setFieldValue(tokenService, "refreshToken", "test-refresh-token");
+        setValue(tokenService, "clientId", "test-client-id");
+        setValue(tokenService, "refreshToken", "test-refresh-token");
         // Create a test token with 1 hour expiry
         Mockito.when(oAuth2Client.renewToken(
                 eq("refresh_token"),
@@ -49,13 +49,6 @@ public class TokenServiceTest {
                                 3600L)
                         )
         );
-    }
-
-    // Helper method to set private fields
-    private void setFieldValue(Object object, String fieldName, Object value) throws Exception {
-        Field field = TokenService.class.getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(object, value);
     }
 
     @Test
@@ -83,7 +76,7 @@ public class TokenServiceTest {
     void testGetToken_ShouldRenewWhenExpired() throws Exception {
         // First get token, manually set expiry to past and reset mock counts
         tokenService.getToken().await().indefinitely();
-        setFieldValue(tokenService, "expiresAt", Instant.now().minus(1, ChronoUnit.HOURS));
+        setValue(tokenService, "expiresAt", Instant.now().minus(1, ChronoUnit.HOURS));
         clearInvocations(oAuth2Client);
 
         // Should renew token when expired
@@ -107,5 +100,6 @@ public class TokenServiceTest {
 
         assertEquals("function-result", result);
         assertNotNull(tokenService.getCachedToken());
+        verify(oAuth2Client, times(1)).renewToken(anyString(), anyString(), anyString(), anyString());
     }
 }
