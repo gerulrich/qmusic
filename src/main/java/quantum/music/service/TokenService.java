@@ -27,6 +27,11 @@ public class TokenService {
     private String currentToken;
     private Instant expiresAt;
 
+    /**
+     * Retrieves the OAuth2 token. If the token is expired or not present, it will renew it.
+     *
+     * @return A Uni containing the access token.
+     */
     public Uni<String> getToken() {
         if (currentToken == null || Instant.now().isAfter(expiresAt)) {
             return renewToken();
@@ -34,14 +39,31 @@ public class TokenService {
         return Uni.createFrom().item(currentToken);
     }
 
+    /**
+     * Returns the cached token if it is still valid.
+     *
+     * @return The cached token or null if it has expired.
+     */
     public String getCachedToken() {
         return currentToken;
     }
 
+    /**
+     * Executes a function that requires the OAuth2 token. The function will be called with the token.
+     *
+     * @param fn A function that takes a token and returns a Uni.
+     * @param <R> The type of the result.
+     * @return A Uni containing the result of the function.
+     */
     public <R> Uni<R> withToken(Supplier<Uni<R>> fn) {
         return getToken().onItem().transformToUni(token -> fn.get());
     }
 
+    /**
+     * Renews the OAuth2 token using the refresh token.
+     *
+     * @return A Uni containing the new access token.
+     */
     private Uni<String> renewToken() {
         return oAuth2Client.renewToken(
                 "refresh_token",

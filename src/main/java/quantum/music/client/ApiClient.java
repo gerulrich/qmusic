@@ -31,6 +31,10 @@ public interface ApiClient {
     Uni<JsonObject> artist(@PathParam("id") String artist);
 
     @GET
+    @Path("/artists/{id}/bio")
+    Uni<JsonObject> bio(@PathParam("id") String artist);
+
+    @GET
     @Path("/artists/{id}/albums")
     Uni<JsonObject> albums(
         @PathParam("id") String artist,
