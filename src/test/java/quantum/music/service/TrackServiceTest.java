@@ -69,7 +69,7 @@ class TrackServiceTest {
         assertEquals("Test Track 1", trackDetail.title());
         assertEquals(1001L, trackDetail.album().id());
         assertEquals("Test Album 1", trackDetail.album().title());
-        assertEquals("https://example.com/api/tracks/3001/steam", trackDetail.content());
+        assertEquals("https://example.com/api/tracks/3001/stream", trackDetail.content());
     }
 
     @Test
