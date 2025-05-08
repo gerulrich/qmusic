@@ -1,10 +1,20 @@
 package quantum.music.service;
 
+import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.subscription.MultiEmitter;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.RequestOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.mutiny.core.Vertx;
+import io.vertx.mutiny.core.buffer.Buffer;
+import io.vertx.mutiny.core.http.HttpClient;
+import io.vertx.mutiny.core.http.HttpClientResponse;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.WebApplicationException;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jboss.logging.Logger;
@@ -29,6 +39,7 @@ public class TrackService {
     private static final String MEDIA_QUALITY_LOSSLESS = "LOSSLESS";
     private static final String MEDIA_TYPE_STREAM = "STREAM";
     private static final String MEDIA_CONTENT_FULL = "FULL";
+    public static final String NONE = "NONE";
 
     @Inject
     @RestClient
@@ -39,6 +50,16 @@ public class TrackService {
 
     @ConfigProperty(name = "app.domain")
     private String domain;
+
+    @Inject
+    private Vertx vertx;
+
+    private HttpClient httpClient;
+
+    @PostConstruct
+    void init() {
+        httpClient = vertx.createHttpClient();
+    }
 
     /**
      * Get tracks for an album.
@@ -80,7 +101,7 @@ public class TrackService {
                             json.getString("version"),
                             json.getString("copyright"),
                             mapJsonToAlbum(json.getJsonObject("album")),
-                            formatResourceUrl("tracks", json.getLong("id"), "content")
+                            formatResourceUrl("tracks", json.getLong("id"), "stream")
                     );
                 })
                 .onFailure().invoke(e -> LOG.errorf(e, "Error getting track: %s", track));
@@ -102,10 +123,43 @@ public class TrackService {
                     return new MediaInfo(
                             manifest.getJsonArray("urls").getString(0),
                             json.getString("audioQuality"),
-                            manifest.getString("codecs")
+                            manifest.getString("codecs"),
+                            manifest.getString("encryptionType")
                     );
                 })
                 .onFailure().invoke(e -> LOG.errorf(e, "Error getting content for track: %s", track));
+    }
+
+    /**
+     * Proxies a file from a given URL.
+     *
+     * @param url The URL of the file to proxy
+     * @return A Multi emitting the file's content as Buffer
+     */
+    public Multi<Buffer> streamFile(String url, String encryption) {
+        if (NONE.equals(encryption)) {
+            return Multi.createFrom().emitter(emitter -> {
+                httpClient
+                        .request(new RequestOptions().setMethod(HttpMethod.GET).setAbsoluteURI(url))
+                        .onItem().transformToUni(req -> req.send())
+                        .subscribe().with(resp -> handleStreaming(resp, emitter), emitter::fail);
+            });
+        }
+        return Multi.createFrom().emitter(emitter ->
+                // TODO handle encryption
+            emitter.fail(new WebApplicationException("Encryption not supported", 400))
+        );
+    }
+
+    private void handleStreaming(HttpClientResponse resp, MultiEmitter<? super Buffer> emitter) {
+        if (resp.statusCode() != 200) {
+            emitter.fail(new WebApplicationException("Failed: " + resp.statusCode(), resp.statusCode()));
+            return;
+        }
+
+        resp.handler(emitter::emit);
+        resp.endHandler(emitter::complete);
+        resp.exceptionHandler(emitter::fail);
     }
 
 
