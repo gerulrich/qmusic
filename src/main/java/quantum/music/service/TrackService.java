@@ -136,7 +136,7 @@ public class TrackService {
      * @param url The URL of the file to proxy
      * @return A Multi emitting the file's content as Buffer
      */
-    public Multi<Buffer> proxyFile(String url, String encryption) {
+    public Multi<Buffer> streamFile(String url, String encryption) {
         if (NONE.equals(encryption)) {
             return Multi.createFrom().emitter(emitter -> {
                 httpClient

@@ -45,6 +45,6 @@ public class TrackResource {
     public Multi<Buffer> stream(@PathParam("id") String id) {
         return  tokenService
                 .withToken(() -> trackService.content(id))
-                .onItem().transformToMulti(mi -> trackService.proxyFile(mi.url(), mi.encryption()));
+                .onItem().transformToMulti(mi -> trackService.streamFile(mi.url(), mi.encryption()));
     }
 }
