@@ -14,6 +14,10 @@ FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
 WORKDIR /work/
 COPY --from=build /code/target/*-runner /work/application
 
+# Receives the version as a build-arg and exposes it as an environment variable
+ARG APP_VERSION=unknown
+ENV APP_VERSION=$APP_VERSION
+
 # set up permissions for user `1001`
 RUN chmod 775 /work /work/application \
   && chown -R 1001 /work \
