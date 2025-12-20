@@ -31,7 +31,7 @@ public class ArtistService {
      * @return Artist details
      */
     public Uni<ArtistDetail> artist(String artist) {
-        return Uni.combine().all().unis(apiClient.artist(artist), apiClient.bio(artist))
+        return Uni.combine().all().unis(apiClient.artist(artist), getArtistBio(artist))
                 .asTuple()
                 .onItem().transform(tuple -> {
                     JsonObject json = tuple.getItem1();
@@ -40,10 +40,18 @@ public class ArtistService {
                         json.getLong("id"),
                         json.getString("name"),
                         formatResourceUrl(json.getLong("id"), "albums"),
-                        bio.getString("text")
+                        bio.getString("text", "Biography not available")
                     );
                 })
                 .onFailure().invoke(e -> LOG.errorf(e, "Error getting artist: %s", artist));
+    }
+
+    private Uni<JsonObject> getArtistBio(String artist) {
+        return apiClient.bio(artist)
+                .onFailure().recoverWithItem(failure -> {
+                    LOG.warnf(failure, "Error getting bio for artist: %s, using empty bio", artist);
+                    return new JsonObject();
+                });
     }
 
     /**
