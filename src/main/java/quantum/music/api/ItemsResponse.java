@@ -1,4 +1,4 @@
-package quantum.music.dto.summary;
+package quantum.music.api;
 
 import java.util.List;
 

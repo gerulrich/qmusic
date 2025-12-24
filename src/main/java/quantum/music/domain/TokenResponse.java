@@ -1,4 +1,4 @@
-package quantum.music.model;
+package quantum.music.domain;
 
 public record TokenResponse(
         String access_token,

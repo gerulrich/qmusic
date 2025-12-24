@@ -1,4 +1,4 @@
-package quantum.music.dto.detail;
+package quantum.music.domain;
 
 /**
  * Represents the decryption keys extracted from a security token used for decrypting

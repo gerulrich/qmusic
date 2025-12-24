@@ -1,4 +1,4 @@
-package quantum.music.dto.detail;
+package quantum.music.domain.providers;
 
 public record MediaInfo(
     String url,

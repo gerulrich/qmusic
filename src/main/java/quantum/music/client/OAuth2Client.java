@@ -4,7 +4,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 import io.smallrye.mutiny.Uni;
-import quantum.music.model.TokenResponse;
+import quantum.music.domain.TokenResponse;
 
 @Path("/v1/oauth2")
 @RegisterRestClient(configKey = "auth-api-tdl")

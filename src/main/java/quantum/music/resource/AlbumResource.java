@@ -3,47 +3,68 @@ package quantum.music.resource;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
-import quantum.music.dto.detail.AlbumDetail;
-import quantum.music.dto.summary.Album;
-import quantum.music.dto.summary.ItemsResponse;
-import quantum.music.dto.summary.TrackList;
-import quantum.music.service.AlbumService;
-import quantum.music.service.TokenService;
-import quantum.music.service.TrackService;
+import jakarta.ws.rs.core.UriInfo;
+import quantum.music.api.*;
+import quantum.music.service.ProviderService;
 
 @Path("/music")
 @Produces(MediaType.APPLICATION_JSON)
 public class AlbumResource {
 
     @Inject
-    AlbumService albumService;
-
-    @Inject
-    TrackService trackService;
-
-    @Inject
-    TokenService tokenService;
+    ProviderService providerService;
 
     @GET
-    @Path("/tdl/search")
-    public Uni<ItemsResponse<Album>> search(
-            @QueryParam("q") String query,
-            @QueryParam("offset") @DefaultValue("0") int offset,
-            @QueryParam("limit") @DefaultValue("10") int limit
-    ) {
-        return tokenService.withToken(() -> albumService.search(query, offset, limit));
+    @Path("/albums/{id}")
+    public Uni<ApiAlbum> album(@Context UriInfo uriInfo, @PathParam("id") String id) {
+        return providerService.fromId(id)
+                .onItem().transformToUni(musicProvider -> musicProvider.getAlbumById(id))
+                .onItem().transform( album -> {
+                    String baseUrl = getBaseUrl(uriInfo);
+                    return new ApiAlbum(
+                            album.id(),
+                            album.title(),
+                            album.release(),
+                            new ApiArtist(
+                                    album.artist().id(),
+                                    album.artist().name(),
+                                    baseUrl + album.artist().link()
+                            ),
+                            album.cover(),
+                            album.copyright(),
+                            STR."\{baseUrl}\{album.link()}/tracks",
+                            null,
+                            album.type()
+                    );
+                });
     }
 
     @GET
-    @Path("/tdl/albums/{id}")
-    public Uni<AlbumDetail> album(@PathParam("id") String album) {
-        return tokenService.withToken(() -> albumService.album(album));
+    @Path("/albums/{id}/tracks")
+    public Uni<ApiAlbumTracks> tracks(@Context UriInfo uriInfo, @PathParam("id") String id) {
+        return providerService.fromId(id)
+                .onItem().transformToUni(musicProvider -> musicProvider.getTracksByAlbumId(id))
+                .onItem().transform( album -> {
+                    String baseUrl = getBaseUrl(uriInfo);
+                    return new ApiAlbumTracks(
+                            null,
+                            album.tracks().size(),
+                            album.tracks().stream().map(track -> new ApiTrack(
+                                    track.id(),
+                                    track.title(),
+                                    track.duration(),
+                                    track.trackNumber(),
+                                    track.volumeNumber(),
+                                    null,
+                                    baseUrl + track.link()
+                            )).toList()
+                    );
+                });
     }
 
-    @GET
-    @Path("/tdl/albums/{id}/tracks")
-    public Uni<TrackList> tracks(@PathParam("id") String album) {
-        return tokenService.withToken(() -> trackService.tracks(album));
+    private String getBaseUrl(UriInfo uriInfo) {
+        return uriInfo.getBaseUri().toString().replaceAll("/$", "/music");
     }
 }
