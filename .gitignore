@@ -27,6 +27,8 @@ nb-configuration.xml
 
 # OSX
 .DS_Store
+.DS_Store?
+._*
 
 # Vim
 *.swp
@@ -36,7 +38,8 @@ nb-configuration.xml
 *.orig
 *.rej
 
-# Local environment
+# Application specific
+secret.jwk
 .env
 
 # Plugin directory

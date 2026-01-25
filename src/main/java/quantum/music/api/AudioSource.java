@@ -1,12 +1,18 @@
 package quantum.music.api;
 
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+
+import java.util.List;
+
 /**
- * Represents an audio source for the music application.
+ * Represents a content provider for the music application.
  * <p>
- * An audio source defines where music content can be retrieved from,
- * such as local storage or remote streaming services.
+ * An audio source identifies where the catalog and streams come from,
+ * such as local storage or a remote streaming service.
  * </p>
  *
- * @param name the unique name identifier of the audio source
+ * @param name the unique code of the source (e.g., "local", "tdl")
  */
-public record AudioSource(String name) {}
+@Schema(name = "AudioSource", description = "Content provider for the music catalog and streams")
+public record AudioSource(@Schema String id, @Schema String name, List<String> capabilities) {
+}

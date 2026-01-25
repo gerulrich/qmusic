@@ -1,4 +1,4 @@
-package quantum.music.domain.providers;
+package quantum.music.domain.tdl;
 
 public record MediaInfo(
     String url,

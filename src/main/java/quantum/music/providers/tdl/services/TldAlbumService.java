@@ -1,4 +1,4 @@
-package quantum.music.providers.tdl;
+package quantum.music.providers.tdl.services;
 
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.json.JsonArray;
@@ -12,6 +12,7 @@ import quantum.music.domain.PagedResponse;
 import quantum.music.domain.providers.Album;
 import quantum.music.domain.providers.Artist;
 import quantum.music.domain.providers.Track;
+import quantum.music.domain.providers.TrackList;
 import quantum.music.service.TokenService;
 
 import java.util.List;
@@ -42,7 +43,7 @@ public class TldAlbumService extends TldAbstractService {
                 .onFailure().invoke(e -> LOG.errorf(e, "Error getting album: %s", album)));
     }
 
-    public Uni<Album> getTracksByAlbumId(String album) {
+    public Uni<TrackList> getTracksByAlbumId(String album) {
         LOG.debugf("Retrieving album tracks for: %s", album);
         return tokenService.withToken(() -> client.tracks(parsedId(album))
                 .onItem().transform(this::mapAlbumWithTracks)
@@ -68,62 +69,65 @@ public class TldAlbumService extends TldAbstractService {
     }
 
     private Album mapAlbum(JsonObject json) {
-        return new Album(
-            formatId(json.getLong("id")),
-            json.getString("title"),
-            mapArtist(json.getJsonObject("artist")),
-            json.getString("releaseDate"),
-            json.getString("copyright"),
-            json.getString("type"),
-            formatCoverUrl(json.getString("cover")),
-            null,
-            formatResourceUrl("albums", formatId(json.getLong("id"))));
+        JsonObject artistJson = json.getJsonObject("artist");
+        return Album.builder()
+            .id(formatId(json.getLong("id")))
+            .title(json.getString("title"))
+            .artist(
+                Artist.builder()
+                    .id(formatId(artistJson.getLong("id")))
+                    .name(artistJson.getString("name"))
+                    .build()
+            )
+            .release(json.getString("releaseDate"))
+            .copyright(json.getString("copyright"))
+            //.type(json.getString("type"))
+            .cover(formatCoverUrl(json.getString("cover")))
+            .tags(getTags(json))
+        .build();
     }
 
-    /**
-     * Maps a JSON object to an Artist.
-     *
-     * @param json The JSON object representing an artist
-     * @return The mapped Artist object, or null if json is null
-     */
-    private Artist mapArtist(JsonObject json) {
-        if (json == null) {
-            return null;
-        }
-        return new Artist(
-                formatId(json.getLong("id")),
-                json.getString("name"),
-                formatResourceUrl("artists", formatId(json.getLong("id")))
-        );
-    }
-
-    private Album mapAlbumWithTracks(JsonObject json) {
+    private TrackList mapAlbumWithTracks(JsonObject json) {
         JsonArray items = json.getJsonArray("items");
-        List<Track> tracks = items.stream()
+        JsonObject albumJson = items.getJsonObject(0).getJsonObject("album");
+        JsonObject artistJson = items.getJsonObject(0).getJsonObject("artist");
+        return new TrackList(
+            Album.builder()
+                    .id(formatId(albumJson.getLong("id")))
+                    .title(albumJson.getString("title"))
+                    .artist(
+                        Artist.builder()
+                            .id(formatId(artistJson.getLong("id")))
+                            .name(artistJson.getString("name"))
+                            .build()
+                    )
+                    .build()
+                ,items.stream()
                 .map(JsonObject.class::cast)
-                .map(this::mapJsonToTrack).toList();
-        return new Album(
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                tracks,
-                null
+                .map(this::mapJsonToTrack)
+                .collect(Collectors.toList())
         );
     }
 
     private Track mapJsonToTrack(JsonObject json) {
-        return new Track(
-                formatId(json.getLong("id")),
-                json.getString("title"),
-                json.getInteger("duration"),
-                json.getInteger("trackNumber"),
-                json.getInteger("volumeNumber"),
-                STR."/tracks/\{formatId(json.getLong("id"))}"
-        );
+        return Track.builder()
+            .id(formatId(json.getLong("id")))
+            .title(json.getString("title"))
+            .duration(json.getInteger("duration"))
+            .trackNumber(json.getInteger("trackNumber"))
+            .volumeNumber(json.getInteger("volumeNumber"))
+            // TODO.codec()
+            // TODO .quality()
+            .build();
     }
+
+    private List<String> getTags(JsonObject json) {
+        JsonArray tagsArray = json.getJsonObject("mediaMetadata").getJsonArray("tags");
+        if (tagsArray == null || tagsArray.isEmpty()) {
+            return null;
+        }
+        return tagsArray.stream().map(Object::toString).collect(Collectors.toList());
+    }
+
 
 }

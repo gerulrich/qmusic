@@ -1,4 +1,4 @@
-package quantum.music.providers.tdl;
+package quantum.music.providers.tdl.services;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -18,13 +18,6 @@ public abstract class TldAbstractService {
         return album.replace("tdl:", "");
     }
 
-    /**
-     * Formats a resource URL using the configured domain.
-     *
-     * @param resourceType    The type of resource (albums, artists, etc.)
-     * @param id              The resource ID
-     * @return The formatted resource URL
-     */
     /**
      * Formats a resource URL using the configured domain.
      *

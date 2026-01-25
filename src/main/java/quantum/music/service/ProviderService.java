@@ -1,12 +1,14 @@
 package quantum.music.service;
 
 import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.tuples.Tuple3;
 import jakarta.enterprise.context.ApplicationScoped;
 import quantum.music.providers.MusicProvider;
 import quantum.music.providers.lcl.LclMusicProvider;
 import quantum.music.providers.tdl.TdlMusicProvider;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.ws.rs.NotFoundException;
@@ -20,10 +22,6 @@ import jakarta.ws.rs.NotFoundException;
 @ApplicationScoped
 public class ProviderService {
 
-    /** Provider ID for TDL provider. */
-    public static final String TDL_PROVIDER = "tdl";
-    /** Provider ID for LCL provider. */
-    public static final String LCL_PROVIDER = "lcl";
     private final Map<String, MusicProvider> providers = new HashMap<>();
 
     /**
@@ -33,12 +31,8 @@ public class ProviderService {
      * @param lclMusicProvider the LCL music provider instance
      */
     public ProviderService(TdlMusicProvider tdlMusicProvider, LclMusicProvider lclMusicProvider) {
-        registerProvider(TDL_PROVIDER, tdlMusicProvider);
-        registerProvider(LCL_PROVIDER, lclMusicProvider);
-    }
-
-    private void registerProvider(String id, MusicProvider provider) {
-        providers.put(id, provider);
+        providers.put(tdlMusicProvider.getProviderId(), tdlMusicProvider);
+        providers.put(lclMusicProvider.getProviderId(), lclMusicProvider);
     }
 
     /**
@@ -73,6 +67,12 @@ public class ProviderService {
             return Uni.createFrom().failure(new NotFoundException(STR."Unknown provider ID: \{providerId}"));
         }
         return Uni.createFrom().item(provider);
+    }
+
+    public List<Tuple3<String,String, List<String>>> getProviders() {
+        return providers.values().stream()
+                .map(provider -> Tuple3.of(provider.getProviderId(), provider.getProviderName(), provider.getCapabilities()))
+                .toList();
     }
 
 }

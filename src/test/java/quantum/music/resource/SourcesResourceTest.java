@@ -25,7 +25,7 @@ class SourcesResourceTest {
                 .statusCode(200)
                 .contentType("application/json")
                 .body("$", hasSize(2))
-                .body("[0].name", is("local"))
-                .body("[1].name", is("tdl"));
+                .body("[0].id", is("lcl"))
+                .body("[1].id", is("tdl"));
     }
 }
