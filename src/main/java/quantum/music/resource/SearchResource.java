@@ -1,5 +1,6 @@
 package quantum.music.resource;
 
+import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -71,6 +72,7 @@ public class SearchResource extends Mapper {
             description = "Internal server error"
         )
     })
+    @Authenticated
     public Uni<ListResponse<ApiAlbum>> search(
             @Context UriInfo uriInfo,
             @Parameter(description = "Source that provides the music catalog and streams", example = "tdl")

@@ -1,5 +1,6 @@
 package quantum.music.resource;
 
+import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Uni;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -57,6 +58,7 @@ public class ArtistResource extends Mapper {
      */
     @GET
     @Path("/artists/{artist}")
+    @Authenticated
     public Uni<ApiArtist> artist(
             @Context UriInfo uriInfo,
             @Parameter(description = "Artist unique identifier", required = true, example = "tdl:98765")
@@ -103,6 +105,7 @@ public class ArtistResource extends Mapper {
             description = "Internal server error"
         )
     })
+    @Authenticated
     public Uni<ListResponse<ApiAlbum>> albums(
             @Context UriInfo uriInfo,
             @Parameter(description = "Artist unique identifier", required = true, example = "tdl:98765")
