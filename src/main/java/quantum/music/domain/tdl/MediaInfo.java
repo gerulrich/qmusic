@@ -1,10 +1,9 @@
 package quantum.music.domain.tdl;
 
 public record MediaInfo(
-    String url,
+    String []urls,
     String quality,
     String codec,
     String encryption,
     String keyId) {
-
-    }
+}

@@ -26,6 +26,7 @@ public record Track(
         String codec,
         String quality,
         List<String> tags,
+        List<TrackStream> streams,
         String version,
         String copyright,
         String content) {
@@ -43,6 +44,7 @@ public record Track(
         private String codec;
         private String quality;
         private List<String> tags;
+        private List<TrackStream> streams;
         private String version;
         private String copyright;
         private String content;
@@ -87,6 +89,11 @@ public record Track(
             return this;
         }
 
+        public Builder streams(List<TrackStream> streams) {
+            this.streams = streams;
+            return this;
+        }
+
         public Builder version(String version) {
             this.version = version;
             return this;
@@ -103,7 +110,7 @@ public record Track(
         }
 
         public Track build() {
-            return new Track(id, title, duration, trackNumber, volumeNumber, codec, quality, tags, version, copyright, content);
+            return new Track(id, title, duration, trackNumber, volumeNumber, codec, quality, tags, streams, version, copyright, content);
         }
     }
 }

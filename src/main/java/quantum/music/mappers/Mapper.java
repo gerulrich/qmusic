@@ -4,9 +4,7 @@ import jakarta.ws.rs.core.UriInfo;
 import quantum.music.api.*;
 import quantum.music.domain.providers.*;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -172,25 +170,20 @@ public abstract class Mapper {
                 .tags(track.tags())
                 .version(track.version())
                 .copyright(track.copyright())
-                // TODO improve tags handling and streaming links construction, currently assumes tags are quality indicators for streaming
-                .streams(Optional.ofNullable(track.tags())
-                        .map(tags -> map(tags, tag -> link(baseUrl, track, tag)))
-                        .orElse(Collections.emptyList()))
+                .streams(map(track.streams(), stream -> link(baseUrl, stream)))
                 .build();
     }
 
     /**
      * Creates a streaming descriptor for a specific track and quality, encoding the playback URL.
      * @param baseUrl canonical API base URL used for the streaming endpoint.
-     * @param track domain track for which the stream is generated.
-     * @param quality quality tag (often derived from track tags) that informs the playback profile.
+     * @param stream domain stream containing the quality and the URL for playback.
      * @return a DTO linking to the stream endpoint with codec and quality information.
      */
-    protected ApiTrackStream link(String baseUrl, Track track, String quality) {
+    protected ApiTrackStream link(String baseUrl, TrackStream stream) {
         return ApiTrackStream.builder()
-                .codec(track.codec())
-                .quality(quality)
-                .url(STR."\{baseUrl}/tracks/\{track.id()}/stream?codec=\{track.codec()}&quality=\{quality}")
+                .quality(stream.quality())
+                .url(STR."\{baseUrl}/\{stream.url()}")
                 .build();
     }
 }
