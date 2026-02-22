@@ -1,6 +1,7 @@
 package quantum.music.resource;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
@@ -18,6 +19,7 @@ class SourcesResourceTest {
      * and the expected audio sources.
      */
     @Test
+    @TestSecurity(user = "test-user")
     void testListSourcesEndpoint() {
         given()
             .when().get("/music/sources")
