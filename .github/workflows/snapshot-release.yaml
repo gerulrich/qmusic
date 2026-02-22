@@ -1,7 +1,13 @@
-name: Release - Docker build and push (GitHub Release)
+name: Snapshot Release - Docker build and push (dont create GitHub release and tag)
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (M.m.p)
+        required: true
+  push:
+    tags:
+      - '*'
 
 jobs:
   build:
@@ -21,7 +27,12 @@ jobs:
 
       - name: Set version
         id: set_version
-        run: echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          fi
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
