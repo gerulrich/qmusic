@@ -1,5 +1,6 @@
 package quantum.music.resource;
 
+import io.quarkus.security.Authenticated;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.core.buffer.Buffer;
@@ -62,6 +63,7 @@ public class TrackResource extends Mapper {
             description = "Internal server error"
         )
     })
+    @Authenticated
     public Uni<ApiTrack> track(
             @Context UriInfo uriInfo,
             @Parameter(description = "Track unique identifier", required = true, example = "tdl:54321")

@@ -1,5 +1,6 @@
 package quantum.music.resource;
 
+import io.quarkus.security.Authenticated;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -56,6 +57,7 @@ public class SourcesResource {
             description = "Internal server error"
         )
     })
+    @Authenticated
     public List<AudioSource> list() {
         return providerService.getProviders().stream().map(provider ->
                 new AudioSource(provider.getItem1(), provider.getItem2(), provider.getItem3())
