@@ -1,5 +1,8 @@
 package quantum.music.providers.tdl.manifest;
 
+import io.vertx.core.json.JsonObject;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.ws.rs.WebApplicationException;
 import quantum.music.domain.tdl.MediaInfo;
 
 import java.io.ByteArrayInputStream;
@@ -21,11 +24,31 @@ import org.w3c.dom.NodeList;
 
 import static io.quarkus.arc.ComponentsProvider.LOG;
 
-public class TdlDashManifestParser {
+@ApplicationScoped
+public class ManifestParser {
 
+    private static final String MIME_TYPE_TIDAL_BTS = "application/vnd.tidal.bts";
+    private static final String MIME_TYPE_DASH_XML = "application/dash+xml";
     private static final String ENCRYPTION_NONE = "NONE";
 
-    public MediaInfo parse(String manifestB64) {
+    public MediaInfo parse(String manifestMimeType, String manifest) {
+        return switch (manifestMimeType) {
+            case MIME_TYPE_TIDAL_BTS -> parseBtsManifest(manifest);
+            case MIME_TYPE_DASH_XML -> parseDashManifest(manifest);
+            default -> throw new WebApplicationException(STR."Unsupported manifest type: \{manifestMimeType}", 400);
+        };
+    }
+
+    private MediaInfo parseBtsManifest(String manifestB64) {
+        JsonObject manifestJson = new JsonObject(new String(Base64.getDecoder().decode(manifestB64)));
+        return new MediaInfo(
+            manifestJson.getJsonArray("urls").stream().map(Object::toString).toArray(String[]::new),
+            manifestJson.getString("encryptionType"),
+            manifestJson.getString("keyId")
+        );
+    }
+
+    private MediaInfo parseDashManifest(String manifestB64) {
         String manifestXml = new String(Base64.getDecoder().decode(manifestB64), StandardCharsets.UTF_8);
         LOG.debugf("Parsed DASH manifest XML: %s", manifestXml);
 
@@ -83,7 +106,8 @@ public class TdlDashManifestParser {
                 throw new IllegalStateException("No SegmentTimeline found in DASH manifest");
             }
 
-            NodeList segmentNodes = ((Element) timelineNodes.item(0)).getElementsByTagNameNS("urn:mpeg:dash:schema:mpd:2011", "S");
+            NodeList segmentNodes = ((Element) timelineNodes.item(0))
+                .getElementsByTagNameNS("urn:mpeg:dash:schema:mpd:2011", "S");
             if (segmentNodes.getLength() == 0) {
                 throw new IllegalStateException("No S elements found in DASH manifest SegmentTimeline");
             }

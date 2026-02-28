@@ -12,7 +12,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.WebApplicationException;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import quantum.music.client.ApiClient;
@@ -23,9 +22,8 @@ import quantum.music.providers.tdl.stream.FileStreamer;
 import quantum.music.providers.tdl.stream.crypto.DecryptingFileStreamer;
 import quantum.music.providers.tdl.stream.http.BasicFileStreamer;
 import quantum.music.providers.tdl.stream.http.MultiUrlFileStreamer;
-import quantum.music.providers.tdl.manifest.TdlDashManifestParser;
+import quantum.music.providers.tdl.manifest.ManifestParser;
 
-import java.util.Base64;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -47,6 +45,9 @@ public class TdlTrackService extends TldAbstractService  {
 
     @Inject
     private Vertx vertx;
+
+    @Inject
+    ManifestParser manifestParser;
 
     private HttpClient httpClient;
     @ConfigProperty(name = "tdl.master.key")
@@ -122,18 +123,7 @@ public class TdlTrackService extends TldAbstractService  {
                 .onItem().transform(json -> {
                     LOG.debugf("Retrieving content for track: %s", parsedId(track));
                     String manifestMimeType = json.getString("manifestMimeType");
-                    if (manifestMimeType.equals("application/vnd.tidal.bts")) {
-                        String encodedManifest = json.getString("manifest");
-                        JsonObject manifest = new JsonObject(new String(Base64.getDecoder().decode(encodedManifest)));
-                        return new MediaInfo(
-                                manifest.getJsonArray("urls").stream().map(Object::toString).toArray(String[]::new),
-                                manifest.getString("encryptionType"),
-                                manifest.getString("keyId")
-                        );
-                    } else if (manifestMimeType.equals("application/dash+xml")) {
-                        return new TdlDashManifestParser().parse(json.getString("manifest"));
-                    }
-                    throw new WebApplicationException("Unsupported manifest type: " + manifestMimeType, 400);
+                    return manifestParser.parse(manifestMimeType, json.getString("manifest"));
                 })
                 .onFailure().invoke(e -> LOG.errorf(e, "Error getting content for track: %s", track)));
     }
