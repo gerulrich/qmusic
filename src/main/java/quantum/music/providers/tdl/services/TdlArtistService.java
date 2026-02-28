@@ -36,6 +36,7 @@ public class TdlArtistService extends TldAbstractService {
                 .id(formatId(artistJson.getLong("id")))
                 .name(artistJson.getString("name"))
                 .bio(bioJson.getString("text").replaceAll("\\[.*?\\]", ""))
+                .picture(formatImageUrl(artistJson.getString("picture"), ARTIST_RESOLUTION))
                 .build();
     }
 

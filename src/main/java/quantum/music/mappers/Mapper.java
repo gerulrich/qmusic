@@ -60,6 +60,7 @@ public abstract class Mapper {
                 .id(artist.id())
                 .name(artist.name())
                 .bio(artist.bio())
+                .picture(artist.picture())
                 .albums(STR."\{baseUrl}/artists/\{artist.id()}/albums")
                 .build();
     }
@@ -74,6 +75,7 @@ public abstract class Mapper {
         return ApiAlbum.builder()
             .id(album.id())
             .title(album.title())
+            .volumes(album.volumes())
             .release(album.release())
             .artist(link(album.artist(), baseUrl))
             .cover(album.cover())

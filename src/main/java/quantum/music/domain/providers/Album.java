@@ -17,6 +17,7 @@ import java.util.List;
 public record Album(
         String id,
         String title,
+        int volumes,
         Artist artist,
         String release,
         String copyright,
@@ -31,6 +32,7 @@ public record Album(
     public static final class Builder {
         private String id;
         private String title;
+        private int volumes;
         private Artist artist;
         private String release;
         private String copyright;
@@ -45,6 +47,11 @@ public record Album(
 
         public Builder title(String title) {
             this.title = title;
+            return this;
+        }
+
+        public Builder volumes(int volumes) {
+            this.volumes = volumes;
             return this;
         }
 
@@ -79,7 +86,7 @@ public record Album(
         }
 
         public Album build() {
-            return new Album(id, title, artist, release, copyright, type, cover, tags);
+            return new Album(id, title, volumes, artist, release, copyright, type, cover, tags);
         }
     }
 }

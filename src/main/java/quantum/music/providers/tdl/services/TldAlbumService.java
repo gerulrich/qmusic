@@ -82,7 +82,7 @@ public class TldAlbumService extends TldAbstractService {
             .release(json.getString("releaseDate"))
             .copyright(json.getString("copyright"))
             //.type(json.getString("type"))
-            .cover(formatCoverUrl(json.getString("cover")))
+            .cover(formatImageUrl(json.getString("cover"), COVER_RESOLUTION))
             .tags(getTags(json))
         .build();
     }

@@ -3,9 +3,9 @@ package quantum.music.api;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 /**
- * Represents a music artist containing metadata such as name and image.
+ * Represents a music artist containing metadata such as name and picture.
  */
-@Schema(name = "Artist", description = "A music artist containing metadata such as name and image.")
+@Schema(name = "Artist", description = "A music artist containing metadata such as name and picture.")
 public final class ApiArtist {
 
     @Schema(description = "Unique identifier for the artist")
@@ -14,8 +14,8 @@ public final class ApiArtist {
     private final String name;
     @Schema(description = "Short biography or description")
     private final String bio;
-    @Schema(description = "URL to the artist image")
-    private final String image;
+    @Schema(description = "URL to the artist picture")
+    private final String picture;
     @Schema(description = "Canonical link to the artist resource")
     private final String link;
     @Schema(description = "Link to fetch the artist albums")
@@ -25,7 +25,7 @@ public final class ApiArtist {
         this.id = builder.id;
         this.name = builder.name;
         this.bio = builder.bio;
-        this.image = builder.image;
+        this.picture = builder.picture;
         this.link = builder.link;
         this.albums = builder.albums;
     }
@@ -50,8 +50,8 @@ public final class ApiArtist {
         return bio;
     }
 
-    public String getImage() {
-        return image;
+    public String getPicture() {
+        return picture;
     }
 
     public String getLink() {
@@ -69,7 +69,7 @@ public final class ApiArtist {
         private String id;
         private String name;
         private String bio;
-        private String image;
+        private String picture;
         private String link;
         private String albums;
 
@@ -80,7 +80,7 @@ public final class ApiArtist {
             this.id = template.id;
             this.name = template.name;
             this.bio = template.bio;
-            this.image = template.image;
+            this.picture = template.picture;
             this.link = template.link;
             this.albums = template.albums;
         }
@@ -110,10 +110,10 @@ public final class ApiArtist {
         }
 
         /**
-         * Sets the image URL.
+         * Sets the picture URL.
          */
-        public Builder image(String image) {
-            this.image = image;
+        public Builder picture(String picture) {
+            this.picture = picture;
             return this;
         }
 
