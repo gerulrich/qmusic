@@ -7,7 +7,7 @@ package quantum.music.domain.providers;
  * @param name artist name
  * @param bio optional artist biography
  */
-public record Artist(String id, String name, String bio) {
+public record Artist(String id, String name, String bio, String picture) {
 
     public static Builder builder() {
         return new Builder();
@@ -17,6 +17,7 @@ public record Artist(String id, String name, String bio) {
         private String id;
         private String name;
         private String bio;
+        private String picture;
 
         public Builder id(String id) {
             this.id = id;
@@ -33,8 +34,13 @@ public record Artist(String id, String name, String bio) {
             return this;
         }
 
+        public Builder picture(String picture) {
+            this.picture = picture;
+            return this;
+        }
+
         public Artist build() {
-            return new Artist(id, name, bio);
+            return new Artist(id, name, bio, picture);
         }
     }
 }

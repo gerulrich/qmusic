@@ -49,7 +49,7 @@ public class TdlMusicProvider implements MusicProvider {
 
     @Override
     public List<String> getCapabilities() {
-        return List.of("list", "play", "import");
+        return List.of("list", "play", "import", "download");
     }
 
     @Override

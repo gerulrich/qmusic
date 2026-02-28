@@ -11,21 +11,21 @@ import io.vertx.mutiny.core.http.HttpClient;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.NotFoundException;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import quantum.music.client.ApiClient;
-import quantum.music.domain.providers.Album;
-import quantum.music.domain.providers.Artist;
-import quantum.music.domain.providers.Track;
+import quantum.music.domain.providers.*;
 import quantum.music.domain.tdl.MediaInfo;
-import quantum.music.domain.providers.TrackDetail;
 import quantum.music.service.TokenService;
 import quantum.music.providers.tdl.stream.FileStreamer;
 import quantum.music.providers.tdl.stream.crypto.DecryptingFileStreamer;
 import quantum.music.providers.tdl.stream.http.BasicFileStreamer;
+import quantum.music.providers.tdl.stream.http.MultiUrlFileStreamer;
+import quantum.music.providers.tdl.manifest.ManifestParser;
 
-import java.util.Base64;
+import java.util.List;
+import java.util.stream.Stream;
 
 import static io.quarkus.arc.ComponentsProvider.LOG;
 
@@ -46,6 +46,9 @@ public class TdlTrackService extends TldAbstractService  {
     @Inject
     private Vertx vertx;
 
+    @Inject
+    ManifestParser manifestParser;
+
     private HttpClient httpClient;
     @ConfigProperty(name = "tdl.master.key")
     private String masterKey;
@@ -59,36 +62,54 @@ public class TdlTrackService extends TldAbstractService  {
     public Uni<TrackDetail> getTrackById(String trackId) {
         LOG.debugf("Retrieving track details for: %s", trackId);
         return tokenService.withToken(() -> apiClient.track(parsedId(trackId))
+                .onItem().ifNull().failWith(() -> new NotFoundException(STR."Track not found: \{trackId}"))
                 .onItem().transform(json -> {
                     JsonObject albumNode = json.getJsonObject("album");
                     JsonObject artistNode = json.getJsonObject("artist");
-
+                    List<String> tags = json.getJsonObject("mediaMetadata")
+                        .getJsonArray("tags")
+                        .stream()
+                        .map(Object::toString)
+                        .toList();
                     return new TrackDetail(
                             Album.builder()
                                 .id(formatId(albumNode.getLong("id")))
                                 .title(albumNode.getString("title"))
                                 .artist(
                                     Artist.builder()
-                                            .id(formatId(artistNode.getLong("id")))
-                                            .name(artistNode.getString("name"))
-                                        .build()
+                                        .id(formatId(artistNode.getLong("id")))
+                                        .name(artistNode.getString("name"))
+                                    .build()
                                 )
-                                .cover(formatCoverUrl(albumNode.getString("cover")))
+                                .cover(formatImageUrl(albumNode.getString("cover"), COVER_RESOLUTION))
                                 .build()
                             ,
-                            new Track(
-                        formatId(json.getLong("id")),
-                        json.getString("title"),
-                        json.getInteger("duration"),
-                        json.getInteger("trackNumber"),
-                        json.getInteger("volumeNumber"),
-                        json.getString("audioQuality"),
-                        json.getString("audioCodec"),
-                        json.getJsonObject("mediaMetadata").getJsonArray("tags").stream().map(Object::toString).toList(),
-                        json.getString("version"),
-                        json.getString("copyright"),
-                        formatResourceUrl("tracks", formatId(json.getLong("id")), "stream")
-                        )
+                            Track.builder()
+                                .id(formatId(json.getLong("id")))
+                                .title(json.getString("title"))
+                                .duration(json.getInteger("duration"))
+                                .trackNumber(json.getInteger("trackNumber"))
+                                .volumeNumber(json.getInteger("volumeNumber"))
+                                .codec(json.getString("audioCodec"))
+                                .quality(json.getString("audioQuality"))
+                                .tags(tags)
+                                .streams(Stream.concat(
+                                    Stream.of(
+                                        TrackStream.builder().quality("LOW")
+                                            .url(STR."tracks/\{trackId}/stream?quality=LOW")
+                                            .build(),
+                                        TrackStream.builder().quality("HIGH")
+                                            .url(STR."tracks/\{trackId}/stream?quality=HIGH")
+                                            .build()
+                                    ),
+                                    tags.stream().distinct().map(tag -> TrackStream.builder().quality(tag)
+                                        .url(STR."tracks/\{trackId}/stream?quality=\{tag}")
+                                        .build()
+                                        )
+                                ).toList())
+                                .version(json.getString("version"))
+                                .copyright(json.getString("copyright"))
+                                .build()
                     );
                 })
                 .onFailure().invoke(e -> LOG.errorf(e, "Error getting track: %s", trackId)));
@@ -98,23 +119,11 @@ public class TdlTrackService extends TldAbstractService  {
         LOG.debugf("Retrieving media content for track: %s with codec: %s and quality: %s", track, codec, quality);
         String q = quality.replaceAll("HIRES", "HI_RES");
         return tokenService.withToken(() -> apiClient.media(parsedId(track), q, MEDIA_TYPE_STREAM, presentation)
+                .onItem().ifNull().failWith(() -> new NotFoundException(STR."Track not found: \{track}"))
                 .onItem().transform(json -> {
                     LOG.debugf("Retrieving content for track: %s", parsedId(track));
                     String manifestMimeType = json.getString("manifestMimeType");
-                    if (!manifestMimeType.equals("application/vnd.tidal.bts")) {
-                        throw new WebApplicationException("Unsupported manifest type: " + manifestMimeType, 400);
-                    }
-
-                    String encodedManifest = json.getString("manifest");
-                    JsonObject manifest = new JsonObject(new String(Base64.getDecoder().decode(encodedManifest)));
-
-                    return new MediaInfo(
-                            manifest.getJsonArray("urls").getString(0),
-                            json.getString("audioQuality"),
-                            manifest.getString("codecs"),
-                            manifest.getString("encryptionType"),
-                            manifest.getString("keyId")
-                    );
+                    return manifestParser.parse(manifestMimeType, json.getString("manifest"));
                 })
                 .onFailure().invoke(e -> LOG.errorf(e, "Error getting content for track: %s", track)));
     }
@@ -126,9 +135,15 @@ public class TdlTrackService extends TldAbstractService  {
      * @return A Multi emitting the file's content as Buffer
      */
     public Multi<Buffer> streamFile(MediaInfo mediaInfo) {
-        String url = mediaInfo.url();
         String encryption = mediaInfo.encryption();
-        FileStreamer base = new BasicFileStreamer(httpClient, new RequestOptions().setMethod(HttpMethod.GET).setAbsoluteURI(url));
+        FileStreamer base;
+        if (mediaInfo.urls().length > 1) {
+            base = new MultiUrlFileStreamer(httpClient, List.of(mediaInfo.urls()));
+        } else {
+            base = new BasicFileStreamer(httpClient, new RequestOptions()
+                .setMethod(HttpMethod.GET)
+                .setAbsoluteURI(mediaInfo.urls()[0]));
+        }
         FileStreamer streamer = switch (encryption) {
             case NONE -> base;
             case OLD_AES -> new DecryptingFileStreamer(base, mediaInfo.keyId(), masterKey);
@@ -136,6 +151,5 @@ public class TdlTrackService extends TldAbstractService  {
         };
         return streamer.stream();
     }
-
 
 }

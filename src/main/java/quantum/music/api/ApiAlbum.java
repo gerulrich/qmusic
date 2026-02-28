@@ -14,6 +14,8 @@ public final class ApiAlbum {
     private final String id;
     @Schema(description = "Album title")
     private final String title;
+    @Schema(description = "Number of volumes or discs in the album")
+    private final int volumes;
     @Schema(description = "Release date (ISO-8601)")
     private final String release;
     @Schema(description = "Artist of the album", implementation = ApiArtist.class)
@@ -34,6 +36,7 @@ public final class ApiAlbum {
     private ApiAlbum(Builder builder) {
         this.id = builder.id;
         this.title = builder.title;
+        this.volumes = builder.volumes;
         this.release = builder.release;
         this.artist = builder.artist;
         this.cover = builder.cover;
@@ -58,6 +61,10 @@ public final class ApiAlbum {
 
     public String getTitle() {
         return title;
+    }
+
+    public int getVolumes() {
+        return volumes;
     }
 
     public String getRelease() {
@@ -98,6 +105,7 @@ public final class ApiAlbum {
     public static final class Builder {
         private String id;
         private String title;
+        private int volumes;
         private String release;
         private ApiArtist artist;
         private String cover;
@@ -113,6 +121,7 @@ public final class ApiAlbum {
         private Builder(ApiAlbum template) {
             this.id = template.id;
             this.title = template.title;
+            this.volumes = template.volumes;
             this.release = template.release;
             this.artist = template.artist;
             this.cover = template.cover;
@@ -140,6 +149,16 @@ public final class ApiAlbum {
          */
         public Builder title(String title) {
             this.title = title;
+            return this;
+        }
+
+        /**
+         * Sets the number of volumes or discs in the album.
+         * @param volumes number of volumes or discs
+         * @return this builder for chaining
+         */
+        public Builder volumes(int volumes) {
+            this.volumes = volumes;
             return this;
         }
 

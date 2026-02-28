@@ -15,7 +15,6 @@ import java.util.List;
  * @param tags provider-specific tags such as format and quality
  * @param version optional version label (e.g., Remaster)
  * @param copyright copyright notice
- * @param content optional content or lyrics payload
  */
 public record Track(
         String id,
@@ -26,9 +25,9 @@ public record Track(
         String codec,
         String quality,
         List<String> tags,
+        List<TrackStream> streams,
         String version,
-        String copyright,
-        String content) {
+        String copyright) {
 
     public static Builder builder() {
         return new Builder();
@@ -43,9 +42,9 @@ public record Track(
         private String codec;
         private String quality;
         private List<String> tags;
+        private List<TrackStream> streams;
         private String version;
         private String copyright;
-        private String content;
 
         public Builder id(String id) {
             this.id = id;
@@ -87,6 +86,11 @@ public record Track(
             return this;
         }
 
+        public Builder streams(List<TrackStream> streams) {
+            this.streams = streams;
+            return this;
+        }
+
         public Builder version(String version) {
             this.version = version;
             return this;
@@ -97,13 +101,8 @@ public record Track(
             return this;
         }
 
-        public Builder content(String content) {
-            this.content = content;
-            return this;
-        }
-
         public Track build() {
-            return new Track(id, title, duration, trackNumber, volumeNumber, codec, quality, tags, version, copyright, content);
+            return new Track(id, title, duration, trackNumber, volumeNumber, codec, quality, tags, streams, version, copyright);
         }
     }
 }

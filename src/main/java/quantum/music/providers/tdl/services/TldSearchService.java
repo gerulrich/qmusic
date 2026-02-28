@@ -58,6 +58,7 @@ public class TldSearchService extends TldAbstractService {
         return Album.builder()
             .id(formatId(json.getLong("id")))
             .title(json.getString("title"))
+            .volumes(json.getInteger("numberOfVolumes"))
             .artist(
                 Artist.builder()
                     .id(formatId(artistNode.getLong("id")))
@@ -67,7 +68,7 @@ public class TldSearchService extends TldAbstractService {
             .release(json.getString("releaseDate"))
             .copyright(json.getString("copyright"))
             .type(json.getString("type"))
-            .cover(formatCoverUrl(json.getString("cover")))
+            .cover(formatImageUrl(json.getString("cover"), COVER_RESOLUTION))
             .tags(getTags(json))
             .build();
     }

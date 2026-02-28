@@ -46,7 +46,7 @@ public class LclMusicProvider implements MusicProvider {
 
     @Override
     public List<String> getCapabilities() {
-        return List.of("list", "play", "edit");
+        return List.of("list", "play", "edit", "analyze", "download");
     }
 
     @Override

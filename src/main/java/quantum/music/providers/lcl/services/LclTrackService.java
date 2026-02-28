@@ -12,10 +12,7 @@ import org.jboss.logging.Logger;
 import quantum.music.domain.local.QAlbum;
 import quantum.music.domain.local.QSource;
 import quantum.music.domain.local.QTrack;
-import quantum.music.domain.providers.Album;
-import quantum.music.domain.providers.Artist;
-import quantum.music.domain.providers.Track;
-import quantum.music.domain.providers.TrackDetail;
+import quantum.music.domain.providers.*;
 import quantum.music.repository.AlbumRepository;
 
 import io.vertx.mutiny.core.buffer.Buffer;
@@ -28,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -92,7 +90,7 @@ public class LclTrackService extends LclProviderService {
         if (filePath == null || filePath.isBlank()) {
             throw new NotFoundException("Track file not found");
         }
-        Path file = Paths.get(filePath); // TODO agregar base path
+        Path file = Paths.get(filePath);
         if (!Files.exists(file) || !Files.isRegularFile(file) || !Files.isReadable(file)) {
             throw new NotFoundException("Track file not found");
         }
@@ -120,6 +118,10 @@ public class LclTrackService extends LclProviderService {
                 .codec(source != null ? source.format : null)
                 .quality(source != null ? source.quality : null)
                 .tags(sourceTags(source))
+                .streams(List.of(TrackStream.builder().quality("DEFAULT")
+                    .url(STR."tracks/\{formatId(track._id)}/stream?quality=DEFAULT")
+                    .build()
+                ))
             .build()
         );
     }
