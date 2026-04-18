@@ -56,9 +56,8 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            gerulrich/qmusic:${{ needs.create-release.outputs.version }}
+            gerulrich/qmusic:${{ github.event.release.tag_name }},
             gerulrich/qmusic:latest
           platforms: linux/amd64,linux/arm64
           build-args: |
-            APP_VERSION=${{ needs.create-release.outputs.version }}
-
+            APP_VERSION=${{ github.event.release.tag_name }}
