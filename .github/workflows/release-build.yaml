@@ -1,4 +1,4 @@
-name: Release + Docker build
+name: Release + Docker build and push
 
 on:
   push:
@@ -56,8 +56,8 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            gerulrich/qmusic:${{ needs.create-release.outputs.version }},
+            gerulrich/qmusic:${{ needs.create-release.outputs.version }}
             gerulrich/qmusic:latest
           platforms: linux/amd64,linux/arm64
           build-args: |
-            APP_VERSION=${{ needs.create-release.outputs.version  }}
+            APP_VERSION=${{ needs.create-release.outputs.version }}
