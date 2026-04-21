@@ -23,12 +23,14 @@ jobs:
           tags: tag:ci
 
       - name: Send PR data to webhook
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           curl -X POST ${{ secrets.WEBHOOK_URL }}/tailscale/gha/pr \
             -H "Content-Type: application/json" \
             -d '{
               "action": "${{ github.event.action }}",
-              "title": "${{ github.event.pull_request.title }}",
+              "title": "$(echo "$PR_TITLE" | jq -Rs .)",
               "number": ${{ github.event.pull_request.number }},
               "author": "${{ github.event.pull_request.user.login }}",
               "url": "${{ github.event.pull_request.html_url }}",
