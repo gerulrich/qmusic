@@ -23,22 +23,17 @@ jobs:
           tags: tag:ci
 
       - name: Send PR data to webhook
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           curl -X POST ${{ secrets.WEBHOOK_URL }}/tailscale/gha/pr \
             -H "Content-Type: application/json" \
-            -d @- <<'EOF'
-          {
-            "action": "${{ github.event.action }}",
-            "title": "$(echo "$PR_TITLE" | jq -Rs .)",
-            "number": ${{ github.event.pull_request.number }},
-            "author": "${{ github.event.pull_request.user.login }}",
-            "url": "${{ github.event.pull_request.html_url }}",
-            "branch": "${{ github.event.pull_request.head.ref }}",
-            "base": "${{ github.event.pull_request.base.ref }}",
-            "state": "${{ github.event.pull_request.state }}",
-            "repository": "${{ github.repository }}"
-          }
-          EOF
+            -d '{
+              "action": "${{ github.event.action }}",
+              "title": "${{ github.event.pull_request.title }}",
+              "number": ${{ github.event.pull_request.number }},
+              "author": "${{ github.event.pull_request.user.login }}",
+              "url": "${{ github.event.pull_request.html_url }}",
+              "branch": "${{ github.event.pull_request.head.ref }}",
+              "base": "${{ github.event.pull_request.base.ref }}",
+              "state": "${{ github.event.pull_request.state }}",
+              "repository": "${{ github.repository }}"
+            }'
