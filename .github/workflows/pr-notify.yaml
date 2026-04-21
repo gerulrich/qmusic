@@ -28,7 +28,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
               "action": "${{ github.event.action }}",
-              "title": "$(echo "${{ github.event.pull_request.title }}" | jq -Rs .)",
+              "title": "${{ github.event.pull_request.title }}",
               "number": ${{ github.event.pull_request.number }},
               "author": "${{ github.event.pull_request.user.login }}",
               "url": "${{ github.event.pull_request.html_url }}",
