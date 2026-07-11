@@ -119,6 +119,7 @@
                 <version>${surefire-plugin.version}</version>
                 <configuration>
                     <argLine>
+                        @{argLine}
                         -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar
                         -Xshare:off
                         --enable-preview

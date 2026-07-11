@@ -6,6 +6,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
@@ -131,5 +132,49 @@ public class AlbumResource extends Mapper {
         return providerService.fromId(id)
                 .onItem().transformToUni(musicProvider -> musicProvider.getTracksByAlbumId(id))
                 .onItem().transform(trackList -> link(getBaseUrl(uriInfo), trackList));
+    }
+
+    /**
+     * Requests an asynchronous import of an album into the local provider.
+     *
+     * @param id The unique identifier of the album to import
+     * @return A Uni emitting a 202 Accepted response when queued
+     */
+    @POST
+    @Path("/albums/{id}/import")
+    @Operation(
+            summary = "Import album by ID",
+            description = "Queues an asynchronous import of album metadata into the local provider"
+    )
+    @APIResponses({
+            @APIResponse(
+                    responseCode = "202",
+                    description = "Import request accepted"
+            ),
+            @APIResponse(
+                    responseCode = "404",
+                    description = "Album not found"
+            ),
+            @APIResponse(
+                    responseCode = "501",
+                    description = "Provider does not support imports"
+            ),
+            @APIResponse(
+                    responseCode = "500",
+                    description = "Internal server error"
+            )
+    })
+    @Authenticated
+    public Uni<Response> importAlbum(
+            @Parameter(description = "Album unique identifier", required = true, example = "tdl:12345")
+            @PathParam("id") String id) {
+        return providerService.fromId(id)
+                .onItem().transformToUni(musicProvider -> {
+                    if (!musicProvider.getCapabilities().contains("import")) {
+                        return Uni.createFrom().failure(new WebApplicationException("Import not supported", Response.Status.NOT_IMPLEMENTED));
+                    }
+                    return musicProvider.importAlbumById(id);
+                })
+                .replaceWith(Response.accepted().build());
     }
 }

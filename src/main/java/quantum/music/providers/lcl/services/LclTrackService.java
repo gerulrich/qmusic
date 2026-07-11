@@ -119,7 +119,7 @@ public class LclTrackService extends LclProviderService {
                 .quality(source != null ? source.quality : null)
                 .tags(sourceTags(source))
                 .streams(List.of(TrackStream.builder().quality("DEFAULT")
-                    .url(STR."tracks/\{formatId(track._id)}/stream?quality=DEFAULT")
+                    .url(STR."tracks/\{track.filePath != null ? formatId(track._id) : track.sourceId}/stream?quality=\{track.filePath != null ? "DEFAULT" :  album.source.format}")
                     .build()
                 ))
             .build()

@@ -3,11 +3,13 @@ package quantum.music.providers.tdl;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.core.buffer.Buffer;
+import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 import quantum.music.domain.PagedResponse;
+import quantum.music.domain.imports.AlbumImportMessage;
 import quantum.music.domain.providers.*;
 import quantum.music.providers.MusicProvider;
 import quantum.music.providers.tdl.services.TdlArtistService;
@@ -36,6 +38,9 @@ public class TdlMusicProvider implements MusicProvider {
 
     @Inject
     private TdlArtistService artistService;
+
+    @Inject
+    EventBus eventBus;
 
     @Override
     public String getProviderId() {
@@ -80,6 +85,15 @@ public class TdlMusicProvider implements MusicProvider {
     @Override
     public Uni<Artist> getArtistById(String artistId) {
         return artistService.getArtistById(artistId);
+    }
+
+    @Override
+    public Uni<Void> importAlbumById(String albumId) {
+        return Uni.combine().all().unis(getAlbumById(albumId), getTracksByAlbumId(albumId))
+                .asTuple()
+                .onItem().transform(tuple -> new TrackList(tuple.getItem1(), tuple.getItem2().tracks()))
+                .onItem().invoke(trackList -> eventBus.publish("album-import", new AlbumImportMessage(getProviderId(), trackList)))
+                .replaceWithVoid();
     }
 
     @Override

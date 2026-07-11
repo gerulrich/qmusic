@@ -117,7 +117,7 @@ public class TdlTrackService extends TldAbstractService  {
 
     public Uni<MediaInfo> content(String track, String codec, String quality, String presentation) {
         LOG.debugf("Retrieving media content for track: %s with codec: %s and quality: %s", track, codec, quality);
-        String q = quality.replaceAll("HIRES", "HI_RES");
+        String q = quality.replace("HIRES", "HI_RES");
         return tokenService.withToken(() -> apiClient.media(parsedId(track), q, MEDIA_TYPE_STREAM, presentation)
                 .onItem().ifNull().failWith(() -> new NotFoundException(STR."Track not found: \{track}"))
                 .onItem().transform(json -> {
