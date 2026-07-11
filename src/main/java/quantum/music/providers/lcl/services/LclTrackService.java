@@ -57,7 +57,7 @@ public class LclTrackService extends LclProviderService {
         ObjectId id = new ObjectId(parsedId(trackId));
         LOG.debugf("LCL track lookup started: trackId=%s", trackId);
         return repository.find("{ 'tracks._id': ?1 }", id).firstResult()
-                .onItem().ifNull().failWith(() -> new NotFoundException(STR."Track not found: \{trackId}"))
+                .onItem().ifNull().failWith(() -> new NotFoundException("Track not found: " + trackId))
                 .onItem().transform(album -> {
                     LOG.debugf("LCL track album hit: trackId=%s, albumId=%s", trackId, formatId(album.id));
                     return Optional.ofNullable(album.tracks).orElse(Collections.emptyList())
@@ -65,7 +65,7 @@ public class LclTrackService extends LclProviderService {
                             .filter(track -> id.equals(track._id))
                             .findFirst()
                             .map(track -> map(album, track, album.source))
-                            .orElseThrow(() -> new NotFoundException(STR."Track not found: \{trackId}"));
+                            .orElseThrow(() -> new NotFoundException("Track not found: " + trackId));
                 });
     }
 
@@ -73,7 +73,7 @@ public class LclTrackService extends LclProviderService {
         ObjectId id = new ObjectId(parsedId(trackId));
         LOG.infof("LCL track stream lookup started: trackId=%s", trackId);
         return repository.find("{ 'tracks._id': ?1 }", id).firstResult()
-                .onItem().ifNull().failWith(() -> new NotFoundException(STR."Track not found: \{trackId}"))
+                .onItem().ifNull().failWith(() -> new NotFoundException("Track not found: " + trackId))
                 .onItem().transform(album -> {
                     LOG.debugf("LCL track album hit: trackId=%s, albumId=%s", trackId, formatId(album.id));
                     return Optional.ofNullable(album.tracks).orElse(Collections.emptyList())
@@ -82,7 +82,7 @@ public class LclTrackService extends LclProviderService {
                             .findFirst()
                             .map(track -> track.filePath)
                             .filter(filePath -> !filePath.isBlank())
-                            .orElseThrow(() -> new NotFoundException(STR."Track not found: \{trackId}"));
+                            .orElseThrow(() -> new NotFoundException("Track not found: " + trackId));
                 }).onItem().transformToMulti(this::streamFile);
     }
 
@@ -101,6 +101,8 @@ public class LclTrackService extends LclProviderService {
 
     /** Maps local album/track entities into a provider track detail DTO. */
     private TrackDetail map(QAlbum album, QTrack track, QSource source) {
+        String streamTrackId = track.filePath != null ? formatId(track._id) : track.sourceId;
+        String streamQuality = track.filePath != null ? "DEFAULT" : album.source.format;
         return new TrackDetail(
             Album.builder()
                 .id(formatId(album.id))
@@ -119,7 +121,7 @@ public class LclTrackService extends LclProviderService {
                 .quality(source != null ? source.quality : null)
                 .tags(sourceTags(source))
                 .streams(List.of(TrackStream.builder().quality("DEFAULT")
-                    .url(STR."tracks/\{track.filePath != null ? formatId(track._id) : track.sourceId}/stream?quality=\{track.filePath != null ? "DEFAULT" :  album.source.format}")
+                    .url("tracks/" + streamTrackId + "/stream?quality=" + streamQuality)
                     .build()
                 ))
             .build()

@@ -50,7 +50,7 @@ public class ProviderService {
         String providerId = parts[0];
         MusicProvider provider = providers.get(providerId);
         if (provider == null) {
-            return Uni.createFrom().failure(new NotFoundException(STR."Unknown provider ID: \{providerId}"));
+            return Uni.createFrom().failure(new NotFoundException("Unknown provider ID: " + providerId));
         }
         return Uni.createFrom().item(provider);
     }
@@ -64,7 +64,7 @@ public class ProviderService {
     public Uni<MusicProvider> getProvider(String providerId) {
         MusicProvider provider = providers.get(providerId);
         if (provider == null) {
-            return Uni.createFrom().failure(new NotFoundException(STR."Unknown provider ID: \{providerId}"));
+            return Uni.createFrom().failure(new NotFoundException("Unknown provider ID: " + providerId));
         }
         return Uni.createFrom().item(provider);
     }

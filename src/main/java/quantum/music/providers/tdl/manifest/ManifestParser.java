@@ -35,7 +35,7 @@ public class ManifestParser {
         return switch (manifestMimeType) {
             case MIME_TYPE_TIDAL_BTS -> parseBtsManifest(manifest);
             case MIME_TYPE_DASH_XML -> parseDashManifest(manifest);
-            default -> throw new WebApplicationException(STR."Unsupported manifest type: \{manifestMimeType}", 400);
+            default -> throw new WebApplicationException("Unsupported manifest type: " + manifestMimeType, 400);
         };
     }
 
