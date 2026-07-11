@@ -20,14 +20,14 @@ public abstract class AbstractProviderService {
      * Builds a provider-scoped identifier in the form "prefix:objectId".
      */
     protected String formatId(ObjectId id) {
-        return STR."\{getProviderPrefix()}:\{id}";
+        return getProviderPrefix() + ":" + id;
     }
 
     /**
      * Removes the provider prefix from a provider-scoped identifier.
      */
     protected String parsedId(String album) {
-        return album.replace(STR."\{getProviderPrefix()}:", "");
+        return album.replace(getProviderPrefix() + ":", "");
     }
 
     /**

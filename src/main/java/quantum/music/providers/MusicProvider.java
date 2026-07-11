@@ -94,6 +94,16 @@ public interface MusicProvider {
     Uni<TrackDetail> getTrackById(String trackId);
 
     /**
+     * Requests an asynchronous import of an album by its provider-specific identifier.
+     *
+     * @param albumId the album's unique ID
+     * @return a Uni that completes when the import request is accepted
+     */
+    default Uni<Void> importAlbumById(String albumId) {
+        return Uni.createFrom().failure(new UnsupportedOperationException("Import not supported"));
+    }
+
+    /**
      * Streams the audio data for a specific track.
      *
      * @param trackId      the track's unique ID

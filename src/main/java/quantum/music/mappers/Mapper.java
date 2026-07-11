@@ -45,7 +45,7 @@ public abstract class Mapper {
         return ApiArtist.builder()
                 .id(artist.id())
                 .name(artist.name())
-                .link(STR."\{baseUrl}/artists/\{artist.id()}")
+                .link(baseUrl + "/artists/" + artist.id())
                 .build();
     }
 
@@ -61,7 +61,7 @@ public abstract class Mapper {
                 .name(artist.name())
                 .bio(artist.bio())
                 .picture(artist.picture())
-                .albums(STR."\{baseUrl}/artists/\{artist.id()}/albums")
+                .albums(baseUrl + "/artists/" + artist.id() + "/albums")
                 .build();
     }
 
@@ -81,7 +81,7 @@ public abstract class Mapper {
             .cover(album.cover())
             .tags(album.tags())
             .type(album.type())
-            .link(STR."\{baseUrl}/albums/\{album.id()}")
+            .link(baseUrl + "/albums/" + album.id())
             .build();
     }
 
@@ -97,7 +97,7 @@ public abstract class Mapper {
                 .title(album.title())
                 .artist(link(album.artist(), baseUrl))
                 .cover(album.cover())
-                .link(STR."\{baseUrl}/albums/\{album.id()}")
+                .link(baseUrl + "/albums/" + album.id())
                 .build();
     }
 
@@ -116,7 +116,7 @@ public abstract class Mapper {
             .cover(album.cover())
             .copyright(album.copyright())
             .tags(album.tags())
-            .tracks(STR."\{baseUrl}/albums/\{album.id()}/tracks")
+            .tracks(baseUrl + "/albums/" + album.id() + "/tracks")
             .build();
     }
 
@@ -148,7 +148,7 @@ public abstract class Mapper {
                 .track(track.trackNumber())
                 .volume(track.volumeNumber())
                 .album(embedded(baseUrl, album))
-                .link(STR."\{baseUrl}/tracks/\{track.id()}")
+                .link(baseUrl + "/tracks/" + track.id())
                 .build();
     }
 
@@ -185,7 +185,7 @@ public abstract class Mapper {
     protected ApiTrackStream link(String baseUrl, TrackStream stream) {
         return ApiTrackStream.builder()
                 .quality(stream.quality())
-                .url(STR."\{baseUrl}/\{stream.url()}")
+                .url(baseUrl + "/" + stream.url())
                 .build();
     }
 }

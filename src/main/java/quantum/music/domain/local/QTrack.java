@@ -47,4 +47,7 @@ public class QTrack {
      */
     @BsonProperty("file_path")
     public String filePath;
+
+    @BsonProperty("source_id")
+    public String sourceId;
 }

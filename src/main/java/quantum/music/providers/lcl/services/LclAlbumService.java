@@ -64,7 +64,7 @@ public class LclAlbumService extends LclProviderService {
     public Uni<Album> getAlbumById(String albumId) {
         LOG.debugf("Fetching local album details for id=%s", albumId);
         return repository.findById(new ObjectId(parsedId(albumId)))
-            .onItem().ifNull().failWith(() -> new NotFoundException(STR."Album not found: \{albumId}"))
+            .onItem().ifNull().failWith(() -> new NotFoundException("Album not found: " + albumId))
             .onItem().transform(this::map);
     }
 
@@ -78,7 +78,7 @@ public class LclAlbumService extends LclProviderService {
     public Uni<TrackList> getTracksByAlbumId(String albumId) {
         LOG.debugf("Fetching local album tracks for id=%s", albumId);
         return repository.findById(new ObjectId(parsedId(albumId)))
-            .onItem().ifNull().failWith(() -> new NotFoundException(STR."Album not found: \{albumId}"))
+            .onItem().ifNull().failWith(() -> new NotFoundException("Album not found: " + albumId))
             .onItem().transform(album -> new TrackList(map(album), mapList(album.tracks, track -> map(track, album))));
     }
 

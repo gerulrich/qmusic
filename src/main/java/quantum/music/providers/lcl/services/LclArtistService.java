@@ -32,7 +32,7 @@ public class LclArtistService extends LclProviderService {
     public Uni<Artist> getArtistById(String artistId) {
         LOG.debugf("Fetching local artist details for id=%s", artistId);
         return repository.findById(new ObjectId(parsedId(artistId)))
-            .onItem().ifNull().failWith(() -> new NotFoundException(STR."Artist not found: \{artistId}"))
+            .onItem().ifNull().failWith(() -> new NotFoundException("Artist not found: " + artistId))
             .onItem().transform(artist -> Artist.builder().id(formatId(artist.id)).name(artist.name).build());
     }
 

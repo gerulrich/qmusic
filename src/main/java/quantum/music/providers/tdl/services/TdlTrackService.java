@@ -62,7 +62,7 @@ public class TdlTrackService extends TldAbstractService  {
     public Uni<TrackDetail> getTrackById(String trackId) {
         LOG.debugf("Retrieving track details for: %s", trackId);
         return tokenService.withToken(() -> apiClient.track(parsedId(trackId))
-                .onItem().ifNull().failWith(() -> new NotFoundException(STR."Track not found: \{trackId}"))
+                .onItem().ifNull().failWith(() -> new NotFoundException("Track not found: " + trackId))
                 .onItem().transform(json -> {
                     JsonObject albumNode = json.getJsonObject("album");
                     JsonObject artistNode = json.getJsonObject("artist");
@@ -96,14 +96,14 @@ public class TdlTrackService extends TldAbstractService  {
                                 .streams(Stream.concat(
                                     Stream.of(
                                         TrackStream.builder().quality("LOW")
-                                            .url(STR."tracks/\{trackId}/stream?quality=LOW")
+                                            .url("tracks/" + trackId + "/stream?quality=LOW")
                                             .build(),
                                         TrackStream.builder().quality("HIGH")
-                                            .url(STR."tracks/\{trackId}/stream?quality=HIGH")
+                                            .url("tracks/" + trackId + "/stream?quality=HIGH")
                                             .build()
                                     ),
                                     tags.stream().distinct().map(tag -> TrackStream.builder().quality(tag)
-                                        .url(STR."tracks/\{trackId}/stream?quality=\{tag}")
+                                        .url("tracks/" + trackId + "/stream?quality=" + tag)
                                         .build()
                                         )
                                 ).toList())
@@ -117,9 +117,9 @@ public class TdlTrackService extends TldAbstractService  {
 
     public Uni<MediaInfo> content(String track, String codec, String quality, String presentation) {
         LOG.debugf("Retrieving media content for track: %s with codec: %s and quality: %s", track, codec, quality);
-        String q = quality.replaceAll("HIRES", "HI_RES");
+        String q = quality.replace("HIRES", "HI_RES");
         return tokenService.withToken(() -> apiClient.media(parsedId(track), q, MEDIA_TYPE_STREAM, presentation)
-                .onItem().ifNull().failWith(() -> new NotFoundException(STR."Track not found: \{track}"))
+                .onItem().ifNull().failWith(() -> new NotFoundException("Track not found: " + track))
                 .onItem().transform(json -> {
                     LOG.debugf("Retrieving content for track: %s", parsedId(track));
                     String manifestMimeType = json.getString("manifestMimeType");

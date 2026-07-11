@@ -29,4 +29,16 @@ public class QArtist {
      */
     @BsonProperty("__v")
     public int version;
+
+    /**
+     * Normalized artist name for search/matching.
+     */
+    @BsonProperty("name_normalized")
+    public String nameNormalized;
+
+    /**
+     * Alternate names or variations used for matching.
+     */
+    @BsonProperty("name_variations")
+    public java.util.List<String> nameVariations;
 }
