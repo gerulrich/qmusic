@@ -20,44 +20,35 @@ import quantum.music.api.*;
 import quantum.music.mappers.Mapper;
 import quantum.music.service.ProviderService;
 
-/**
- * Resource providing REST endpoints for album and track information.
- * <p>
- * This resource offers endpoints to retrieve detailed album information and track listings
- * from various music providers. It supports reactive programming using Mutiny's Uni
- * for non-blocking operations and provides comprehensive album metadata including
- * artist details, cover art, copyright information, and complete track listings.
- * </p>
- * <p>
- * All endpoints return data in JSON format and construct URIs dynamically based on
- * the request context to ensure proper resource linking.
- * </p>
- */
+/// Resource providing REST endpoints for album and track information.
+///
+/// This resource offers endpoints to retrieve detailed album information and track listings
+/// from various music providers. It supports reactive programming using Mutiny's Uni
+/// for non-blocking operations and provides comprehensive album metadata including
+/// artist details, cover art, copyright information, and complete track listings.
+///
+/// All endpoints return data in JSON format and construct URIs dynamically based on
+/// the request context to ensure proper resource linking.
 
 @Path("/music")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Albums", description = "Album information and track listings")
 public class AlbumResource extends Mapper {
 
-    /**
-     * Service for interacting with music provider implementations.
-     */
+    /// Service for interacting with music provider implementations.
     @Inject
     ProviderService providerService;
 
-    /**
-     * Retrieves detailed information about a specific album.
-     * <p>
-     * This endpoint fetches album information from the appropriate music provider
-     * based on the album ID. The response includes the album's complete metadata
-     * such as title, release date, cover art, copyright, tags, type, and a URI
-     * to retrieve the album's tracks.
-     * </p>
-     *
-     * @param uriInfo The URI context information used to construct resource links
-     * @param id      The unique identifier of the album to retrieve
-     * @return A Uni emitting the album information wrapped in an ApiAlbum object
-     */
+    /// Retrieves detailed information about a specific album.
+    ///
+    /// This endpoint fetches album information from the appropriate music provider
+    /// based on the album ID. The response includes the album's complete metadata
+    /// such as title, release date, cover art, copyright, tags, type, and a URI
+    /// to retrieve the album's tracks.
+    ///
+    /// @param uriInfo The URI context information used to construct resource links
+    /// @param id      The unique identifier of the album to retrieve
+    /// @return A Uni emitting the album information wrapped in an ApiAlbum object
     @GET
     @Path("/albums/{id}")
     @Operation(
@@ -89,20 +80,17 @@ public class AlbumResource extends Mapper {
                 .onItem().transform(album -> detail(getBaseUrl(uriInfo), album));
     }
 
-    /**
-     * Retrieves the track listing for a specific album.
-     * <p>
-     * This endpoint fetches all tracks associated with the specified album from
-     * the appropriate music provider. The response includes complete track information
-     * such as title, duration, track number, volume number, and individual track URIs.
-     * The result is wrapped in an ApiAlbumTracks object containing the total track count
-     * and the list of tracks.
-     * </p>
-     *
-     * @param uriInfo The URI context information used to construct resource links
-     * @param id      The unique identifier of the album whose tracks to retrieve
-     * @return A Uni emitting an ApiAlbumTracks object containing the track listing
-     */
+    /// Retrieves the track listing for a specific album.
+    ///
+    /// This endpoint fetches all tracks associated with the specified album from
+    /// the appropriate music provider. The response includes complete track information
+    /// such as title, duration, track number, volume number, and individual track URIs.
+    /// The result is wrapped in an ApiAlbumTracks object containing the total track count
+    /// and the list of tracks.
+    ///
+    /// @param uriInfo The URI context information used to construct resource links
+    /// @param id      The unique identifier of the album whose tracks to retrieve
+    /// @return A Uni emitting an ApiAlbumTracks object containing the track listing
     @GET
     @Path("/albums/{id}/tracks")
     @Operation(
@@ -134,12 +122,10 @@ public class AlbumResource extends Mapper {
                 .onItem().transform(trackList -> link(getBaseUrl(uriInfo), trackList));
     }
 
-    /**
-     * Requests an asynchronous import of an album into the local provider.
-     *
-     * @param id The unique identifier of the album to import
-     * @return A Uni emitting a 202 Accepted response when queued
-     */
+    /// Requests an asynchronous import of an album into the local provider.
+    ///
+    /// @param id The unique identifier of the album to import
+    /// @return A Uni emitting a 202 Accepted response when queued
     @POST
     @Path("/albums/{id}/import")
     @Operation(

@@ -4,9 +4,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.List;
 
-/**
- * Represents a music album containing metadata such as title, artist, and cover art.
- */
+/// Represents a music album containing metadata such as title, artist, and cover art.
 @Schema(name = "Album", description = "A music album containing metadata such as title, artist, and cover art.")
 public final class ApiAlbum {
 
@@ -99,9 +97,7 @@ public final class ApiAlbum {
         return tracks;
     }
 
-    /**
-     * Builder for {@link ApiAlbum} that performs defensive copying when creating the DTO.
-     */
+    /// Builder for {@link ApiAlbum} that performs defensive copying when creating the DTO.
     public static final class Builder {
         private String id;
         private String title;
@@ -132,120 +128,96 @@ public final class ApiAlbum {
             this.tracks = template.tracks;
         }
 
-        /**
-         * Sets the catalog identifier.
-         * @param id stable identifier used to reference the album
-         * @return this builder for chaining
-         */
+        /// Sets the catalog identifier.
+        /// @param id stable identifier used to reference the album
+        /// @return this builder for chaining
         public Builder id(String id) {
             this.id = id;
             return this;
         }
 
-        /**
-         * Sets the public-facing album title.
-         * @param title human-readable album title
-         * @return this builder for chaining
-         */
+        /// Sets the public-facing album title.
+        /// @param title human-readable album title
+        /// @return this builder for chaining
         public Builder title(String title) {
             this.title = title;
             return this;
         }
 
-        /**
-         * Sets the number of volumes or discs in the album.
-         * @param volumes number of volumes or discs
-         * @return this builder for chaining
-         */
+        /// Sets the number of volumes or discs in the album.
+        /// @param volumes number of volumes or discs
+        /// @return this builder for chaining
         public Builder volumes(int volumes) {
             this.volumes = volumes;
             return this;
         }
 
-        /**
-         * Sets the release date.
-         * @param release release date expressed as ISO-8601 string
-         * @return this builder for chaining
-         */
+        /// Sets the release date.
+        /// @param release release date expressed as ISO-8601 string
+        /// @return this builder for chaining
         public Builder release(String release) {
             this.release = release;
             return this;
         }
 
-        /**
-         * Assigns the artist DTO.
-         * @param artist artist representation that owns the album
-         * @return this builder for chaining
-         */
+        /// Assigns the artist DTO.
+        /// @param artist artist representation that owns the album
+        /// @return this builder for chaining
         public Builder artist(ApiArtist artist) {
             this.artist = artist;
             return this;
         }
 
-        /**
-         * Sets the cover URL.
-         * @param cover absolute link to the album artwork
-         * @return this builder for chaining
-         */
+        /// Sets the cover URL.
+        /// @param cover absolute link to the album artwork
+        /// @return this builder for chaining
         public Builder cover(String cover) {
             this.cover = cover;
             return this;
         }
 
-        /**
-         * Sets the copyright notice.
-         * @param copyright copyright or rights holder text
-         * @return this builder for chaining
-         */
+        /// Sets the copyright notice.
+        /// @param copyright copyright or rights holder text
+        /// @return this builder for chaining
         public Builder copyright(String copyright) {
             this.copyright = copyright;
             return this;
         }
 
-        /**
-         * Sets the tags list.
-         * @param tags descriptive tags applied to the album
-         * @return this builder for chaining
-         */
+        /// Sets the tags list.
+        /// @param tags descriptive tags applied to the album
+        /// @return this builder for chaining
         public Builder tags(List<String> tags) {
             this.tags = tags;
             return this;
         }
 
-        /**
-         * Sets the album type.
-         * @param type album classification such as LP, EP or single
-         * @return this builder for chaining
-         */
+        /// Sets the album type.
+        /// @param type album classification such as LP, EP or single
+        /// @return this builder for chaining
         public Builder type(String type) {
             this.type = type;
             return this;
         }
 
-        /**
-         * Sets the canonical link.
-         * @param link absolute link to the album resource
-         * @return this builder for chaining
-         */
+        /// Sets the canonical link.
+        /// @param link absolute link to the album resource
+        /// @return this builder for chaining
         public Builder link(String link) {
             this.link = link;
             return this;
         }
 
-        /**
-         * Sets the tracks link.
-         * @param tracks endpoint to retrieve the album tracks
-         * @return this builder for chaining
-         */
+        /// Sets the tracks link.
+        /// @param tracks endpoint to retrieve the album tracks
+        /// @return this builder for chaining
         public Builder tracks(String tracks) {
             this.tracks = tracks;
             return this;
         }
 
-        /**
-         * Creates an immutable {@link ApiAlbum} instance.
-         * @return the constructed DTO
-         */
+        /// Creates an immutable {@link ApiAlbum} instance.
+        /// @return the constructed DTO
         public ApiAlbum build() {
             return new ApiAlbum(this);
         }

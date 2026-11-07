@@ -13,9 +13,7 @@ import org.bson.Document;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
-/**
- * Configuration class to create MongoDB indexes at application startup.
- */
+/// Configuration class to create MongoDB indexes at application startup.
 @ApplicationScoped
 @UnlessBuildProfile("test")
 public class MongoIndexConfig {
@@ -28,12 +26,10 @@ public class MongoIndexConfig {
     @ConfigProperty(name = "quarkus.mongodb.database")
     String database;
 
-    /**
-     * Creates text indexes for Album collection on application startup.
-     * This allows full-text search on title, artist, and albumArtist fields.
-     *
-     * @param event the startup event
-     */
+    /// Creates text indexes for Album collection on application startup.
+    /// This allows full-text search on title, artist, and albumArtist fields.
+    ///
+    /// @param event the startup event
     void onStart(@Observes StartupEvent event) {
         LOG.info("Creating MongoDB text indexes...");
         createAlbumTextIndex();

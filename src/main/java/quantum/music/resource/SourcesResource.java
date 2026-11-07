@@ -17,13 +17,10 @@ import quantum.music.service.ProviderService;
 
 import java.util.List;
 
-/**
- * REST resource for managing audio sources.
- * <p>
- * This resource provides endpoints to retrieve available audio sources
- * for the music application.
- * </p>
- */
+/// REST resource for managing audio sources.
+///
+/// This resource provides endpoints to retrieve available audio sources
+/// for the music application.
 @Path("/music/sources")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Sources", description = "Audio source management")
@@ -32,15 +29,12 @@ public class SourcesResource {
     @Inject
     ProviderService providerService;
 
-    /**
-     * Retrieves a list of available audio sources.
-     * <p>
-     * Returns all configured sources that provide the music catalog and streams,
-     * for example local storage and TDL.
-     * </p>
-     *
-     * @return a list of {@link AudioSource} objects representing available sources
-     */
+    /// Retrieves a list of available audio sources.
+    ///
+    /// Returns all configured sources that provide the music catalog and streams,
+    /// for example local storage and TDL.
+    ///
+    /// @return a list of {@link AudioSource} objects representing available sources
     @GET
     @Operation(
         summary = "List audio sources",

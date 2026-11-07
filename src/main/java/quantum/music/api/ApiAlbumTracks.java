@@ -4,9 +4,7 @@ import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
 import java.util.List;
 
-/**
- * Represents a collection of album tracks containing metadata such as album and tracks.
- */
+/// Represents a collection of album tracks containing metadata such as album and tracks.
 @Schema(name = "AlbumTracks", description = "A collection of album tracks containing metadata such as album and tracks.")
 public final class ApiAlbumTracks {
 
@@ -36,9 +34,7 @@ public final class ApiAlbumTracks {
         return tracks;
     }
 
-    /**
-     * Builder for {@link ApiAlbumTracks}.
-     */
+    /// Builder for {@link ApiAlbumTracks}.
     public static final class Builder {
         private int total;
         private List<ApiTrack> tracks;
@@ -51,25 +47,19 @@ public final class ApiAlbumTracks {
             this.tracks = template.tracks;
         }
 
-        /**
-         * Sets the total number of tracks.
-         */
+        /// Sets the total number of tracks.
         public Builder total(int total) {
             this.total = total;
             return this;
         }
 
-        /**
-         * Sets the list of track DTOs.
-         */
+        /// Sets the list of track DTOs.
         public Builder tracks(List<ApiTrack> tracks) {
             this.tracks = tracks;
             return this;
         }
 
-        /**
-         * Creates an immutable {@link ApiAlbumTracks} instance.
-         */
+        /// Creates an immutable {@link ApiAlbumTracks} instance.
         public ApiAlbumTracks build() {
             return new ApiAlbumTracks(this);
         }

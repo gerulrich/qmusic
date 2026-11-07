@@ -21,41 +21,32 @@ import quantum.music.api.Response;
 import quantum.music.mappers.Mapper;
 import quantum.music.service.ProviderService;
 
-/**
- * Resource providing REST endpoints for artist and album information.
- * <p>
- * This resource offers endpoints to retrieve artist details and their associated albums
- * from various music providers. It supports reactive programming using Mutiny's Uni
- * for non-blocking operations and provides paginated results for album listings.
- * </p>
- * <p>
- * All endpoints return data in JSON format and construct URIs dynamically based on
- * the request context to ensure proper resource linking.
- * </p>
- */
+/// Resource providing REST endpoints for artist and album information.
+///
+/// This resource offers endpoints to retrieve artist details and their associated albums
+/// from various music providers. It supports reactive programming using Mutiny's Uni
+/// for non-blocking operations and provides paginated results for album listings.
+///
+/// All endpoints return data in JSON format and construct URIs dynamically based on
+/// the request context to ensure proper resource linking.
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Artists", description = "Artist information and album listings")
 @Path("/music")
 public class ArtistResource extends Mapper {
 
-    /**
-     * Service for interacting with music provider implementations.
-     */
+    /// Service for interacting with music provider implementations.
     @Inject
     ProviderService providerService;
 
-    /**
-     * Retrieves detailed information about a specific artist.
-     * <p>
-     * This endpoint fetches artist information from the appropriate music provider
-     * based on the artist ID. The response includes the artist's basic details
-     * and a URI to retrieve their albums.
-     * </p>
-     *
-     * @param uriInfo The URI context information used to construct resource links
-     * @param artistId The unique identifier of the artist to retrieve
-     * @return A Uni emitting the artist information wrapped in an ApiArtist object
-     */
+    /// Retrieves detailed information about a specific artist.
+    ///
+    /// This endpoint fetches artist information from the appropriate music provider
+    /// based on the artist ID. The response includes the artist's basic details
+    /// and a URI to retrieve their albums.
+    ///
+    /// @param uriInfo The URI context information used to construct resource links
+    /// @param artistId The unique identifier of the artist to retrieve
+    /// @return A Uni emitting the artist information wrapped in an ApiArtist object
     @GET
     @Path("/artists/{artist}")
     @Authenticated
@@ -69,21 +60,18 @@ public class ArtistResource extends Mapper {
                 .onItem().transform( artist -> detail(getBaseUrl(uriInfo), artist));
     }
 
-    /**
-     * Retrieves a paginated list of albums for a specific artist.
-     * <p>
-     * This endpoint fetches all albums associated with the specified artist from
-     * the appropriate music provider. Results are paginated to manage large
-     * collections efficiently. Each album includes complete metadata and links
-     * to related resources.
-     * </p>
-     *
-     * @param uriInfo The URI context information used to construct resource links
-     * @param artistId The unique identifier of the artist whose albums to retrieve
-     * @param offset The starting position in the result set (default: 0)
-     * @param limit The maximum number of results to return (default: 10)
-     * @return A Uni emitting an ItemsResponse containing the paginated album list
-     */
+    /// Retrieves a paginated list of albums for a specific artist.
+    ///
+    /// This endpoint fetches all albums associated with the specified artist from
+    /// the appropriate music provider. Results are paginated to manage large
+    /// collections efficiently. Each album includes complete metadata and links
+    /// to related resources.
+    ///
+    /// @param uriInfo The URI context information used to construct resource links
+    /// @param artistId The unique identifier of the artist whose albums to retrieve
+    /// @param offset The starting position in the result set (default: 0)
+    /// @param limit The maximum number of results to return (default: 10)
+    /// @return A Uni emitting an ItemsResponse containing the paginated album list
     @GET
     @Path("/artists/{artist}/albums")
     @Operation(

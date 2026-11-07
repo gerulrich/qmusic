@@ -3,9 +3,7 @@ package quantum.music.api;
 import java.util.List;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-/**
- * List response representation.
- */
+/// List response representation.
 @Schema(name = "ListResponse", description = "List response with pagination metadata")
 public record ListResponse<T>(
         List<T> items,
@@ -18,6 +16,9 @@ public record ListResponse<T>(
         return new Builder<>(items);
     }
 
+    /// Builds a paginated list response.
+    ///
+    /// @param <T> item type
     public static final class Builder<T> {
         private List<T> items;
         private int offset;
@@ -53,4 +54,3 @@ public record ListResponse<T>(
         }
     }
 }
-

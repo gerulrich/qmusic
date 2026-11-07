@@ -9,11 +9,9 @@ import org.jboss.logging.Logger;
 import quantum.music.domain.providers.Artist;
 import quantum.music.repository.ArtistRepository;
 
-/**
- * Service for local artist lookups.
- *
- * <p>Provides provider-facing retrieval logic for artists.</p>
- */
+/// Service for local artist lookups.
+///
+/// Provides provider-facing retrieval logic for artists.
 @ApplicationScoped
 public class LclArtistService extends LclProviderService {
 
@@ -22,13 +20,11 @@ public class LclArtistService extends LclProviderService {
     @Inject
     private ArtistRepository repository;
 
-    /**
-     * Retrieves a local artist by its provider-facing id.
-     *
-     * @param artistId provider-facing artist id
-     * @return artist data for the requested id
-     * @throws NotFoundException when the artist does not exist
-     */
+    /// Retrieves a local artist by its provider-facing id.
+    ///
+    /// @param artistId provider-facing artist id
+    /// @return artist data for the requested id
+    /// @throws NotFoundException when the artist does not exist
     public Uni<Artist> getArtistById(String artistId) {
         LOG.debugf("Fetching local artist details for id=%s", artistId);
         return repository.findById(new ObjectId(parsedId(artistId)))

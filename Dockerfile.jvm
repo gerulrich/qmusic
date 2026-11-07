@@ -1,0 +1,30 @@
+## Stage 1: build the application in JVM mode
+FROM maven:3.9-eclipse-temurin-25 AS build
+
+WORKDIR /code
+
+COPY pom.xml /code/pom.xml
+COPY src /code/src
+
+RUN mvn -B package -DskipTests
+
+## Stage 2: runtime JVM image
+FROM registry.access.redhat.com/ubi9/openjdk-25:1.24-3.1793588563
+
+ENV LANGUAGE='en_US:en'
+
+WORKDIR /deployments
+
+COPY --from=build /code/target/quarkus-app/lib/ /deployments/lib/
+COPY --from=build /code/target/quarkus-app/*.jar /deployments/
+COPY --from=build /code/target/quarkus-app/app/ /deployments/app/
+COPY --from=build /code/target/quarkus-app/quarkus/ /deployments/quarkus/
+
+EXPOSE 8080
+EXPOSE 8005
+USER 185
+
+ENV JAVA_OPTS_APPEND="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8005"
+ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
+
+ENTRYPOINT [ "/opt/jboss/container/java/run/run-java.sh" ]

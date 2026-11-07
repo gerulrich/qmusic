@@ -16,11 +16,9 @@ import quantum.music.domain.providers.Track;
 import quantum.music.domain.providers.TrackList;
 import quantum.music.repository.AlbumRepository;
 
-/**
- * Service for local album lookups and mappings.
- *
- * <p>Provides provider-facing retrieval and mapping logic for albums and tracks.</p>
- */
+/// Service for local album lookups and mappings.
+///
+/// Provides provider-facing retrieval and mapping logic for albums and tracks.
 @ApplicationScoped
 public class LclAlbumService extends LclProviderService {
 
@@ -29,14 +27,12 @@ public class LclAlbumService extends LclProviderService {
     @Inject
     AlbumRepository repository;
 
-    /**
-     * Retrieves local albums for an artist with pagination.
-     *
-     * @param artistId provider-facing artist id
-     * @param offset zero-based item offset
-     * @param limit maximum number of items to return
-     * @return paged list of albums for the artist
-     */
+    /// Retrieves local albums for an artist with pagination.
+    ///
+    /// @param artistId provider-facing artist id
+    /// @param offset zero-based item offset
+    /// @param limit maximum number of items to return
+    /// @return paged list of albums for the artist
     public Uni<PagedResponse<Album>> getAlbumsByArtistId(String artistId, int offset, int limit) {
         LOG.debugf("Fetching local albums for artistId=%s, offset=%d, limit=%d", artistId, offset, limit);
         ObjectId id = new ObjectId(parsedId(artistId));
@@ -54,13 +50,11 @@ public class LclAlbumService extends LclProviderService {
         ));
     }
 
-    /**
-     * Retrieves a local album by its provider-facing id.
-     *
-     * @param albumId provider-facing album id
-     * @return album data for the requested id
-     * @throws NotFoundException when the album does not exist
-     */
+    /// Retrieves a local album by its provider-facing id.
+    ///
+    /// @param albumId provider-facing album id
+    /// @return album data for the requested id
+    /// @throws NotFoundException when the album does not exist
     public Uni<Album> getAlbumById(String albumId) {
         LOG.debugf("Fetching local album details for id=%s", albumId);
         return repository.findById(new ObjectId(parsedId(albumId)))
@@ -68,13 +62,11 @@ public class LclAlbumService extends LclProviderService {
             .onItem().transform(this::map);
     }
 
-    /**
-     * Retrieves tracks for a local album by provider-facing id.
-     *
-     * @param albumId provider-facing album id
-     * @return album data with its track list
-     * @throws NotFoundException when the album does not exist
-     */
+    /// Retrieves tracks for a local album by provider-facing id.
+    ///
+    /// @param albumId provider-facing album id
+    /// @return album data with its track list
+    /// @throws NotFoundException when the album does not exist
     public Uni<TrackList> getTracksByAlbumId(String albumId) {
         LOG.debugf("Fetching local album tracks for id=%s", albumId);
         return repository.findById(new ObjectId(parsedId(albumId)))
@@ -82,7 +74,7 @@ public class LclAlbumService extends LclProviderService {
             .onItem().transform(album -> new TrackList(map(album), mapList(album.tracks, track -> map(track, album))));
     }
 
-    /** Maps a local album entity into a provider album DTO. */
+    ///  Maps a local album entity into a provider album DTO.
     private Album map(QAlbum album) {
         return Album.builder()
             .id(formatId(album.id))
@@ -101,7 +93,7 @@ public class LclAlbumService extends LclProviderService {
             .build();
     }
 
-    /** Maps a local track entity into a provider track DTO. */
+    ///  Maps a local track entity into a provider track DTO.
     private Track map(QTrack track, QAlbum album) {
         QSource source = album.source;
         return Track.builder()

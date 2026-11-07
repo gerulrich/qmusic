@@ -18,6 +18,7 @@ import quantum.music.service.TokenService;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/// Retrieves TDL album metadata, album tracks, and artist album pages.
 @ApplicationScoped
 public class TldAlbumService extends TldAbstractService {
 
@@ -30,12 +31,10 @@ public class TldAlbumService extends TldAbstractService {
     @Inject
     TokenService tokenService;
 
-    /**
-     * Get album details by ID.
-     *
-     * @param album Album ID
-     * @return Album details
-     */
+    /// Get album details by ID.
+    ///
+    /// @param album Album ID
+    /// @return Album details
     public Uni<Album> getAlbumById(String album) {
         LOG.debugf("Retrieving album details for: %s", album);
         return tokenService.withToken(() -> client.album(parsedId(album))

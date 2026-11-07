@@ -2,9 +2,7 @@ package quantum.music.api;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-/**
- * Represents a music track stream containing metadata such as codec, quality, and stream URL.
- */
+/// Represents a music track stream containing metadata such as codec, quality, and stream URL.
 @Schema(name = "TrackStream", description = "A music track stream containing metadata such as codec, quality, and stream URL.")
 public final class ApiTrackStream {
 
@@ -41,6 +39,7 @@ public final class ApiTrackStream {
         return url;
     }
 
+    /// Builds an immutable API representation of a track stream.
     public static final class Builder {
         private String codec;
         private String quality;
@@ -55,44 +54,36 @@ public final class ApiTrackStream {
             this.url = template.url;
         }
 
-        /**
-         * Sets the audio codec for the track stream.
-         *
-         * @param codec the codec to set
-         * @return the builder instance
-         */
+        /// Sets the audio codec for the track stream.
+        ///
+        /// @param codec the codec to set
+        /// @return the builder instance
         public Builder codec(String codec) {
             this.codec = codec;
             return this;
         }
 
-        /**
-         * Sets the quality or bitrate for the track stream.
-         *
-         * @param quality the quality to set
-         * @return the builder instance
-         */
+        /// Sets the quality or bitrate for the track stream.
+        ///
+        /// @param quality the quality to set
+        /// @return the builder instance
         public Builder quality(String quality) {
             this.quality = quality;
             return this;
         }
 
-        /**
-         * Sets the URL for the track stream.
-         *
-         * @param url the URL to set
-         * @return the builder instance
-         */
+        /// Sets the URL for the track stream.
+        ///
+        /// @param url the URL to set
+        /// @return the builder instance
         public Builder url(String url) {
             this.url = url;
             return this;
         }
 
-        /**
-         * Builds the ApiTrackStream instance.
-         *
-         * @return the ApiTrackStream instance
-         */
+        /// Builds the ApiTrackStream instance.
+        ///
+        /// @return the ApiTrackStream instance
         public ApiTrackStream build() {
             return new ApiTrackStream(this);
         }

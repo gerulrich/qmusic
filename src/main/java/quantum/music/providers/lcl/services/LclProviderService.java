@@ -5,11 +5,9 @@ import quantum.music.providers.AbstractProviderService;
 
 import java.util.List;
 
-/**
- * Base service for local provider implementations.
- *
- * <p>Defines the provider prefix used when formatting local ids.</p>
- */
+/// Base service for local provider implementations.
+///
+/// Defines the provider prefix used when formatting local ids.
 public abstract class LclProviderService extends AbstractProviderService {
 
     @Override
@@ -17,12 +15,10 @@ public abstract class LclProviderService extends AbstractProviderService {
         return "lcl";
     }
 
-    /**
-     * Builds tag values from source format and quality.
-     *
-     * @param source local source data
-     * @return list of non-null tags in format, quality order
-     */
+    /// Builds tag values from source format and quality.
+    ///
+    /// @param source local source data
+    /// @return list of non-null tags in format, quality order
     protected List<String> sourceTags(QSource source) {
         if (source == null) {
             return List.of();

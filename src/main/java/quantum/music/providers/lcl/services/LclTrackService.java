@@ -28,13 +28,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Service responsible for fetching a single track from local albums.
- *
- * <p>Performs a lookup by nested track id and maps album/track data into
- * provider DTOs. The response includes minimal album info and track
- * metadata derived from the album source (codec and quality).</p>
- */
+/// Service responsible for fetching a single track from local albums.
+///
+/// Performs a lookup by nested track id and maps album/track data into
+/// provider DTOs. The response includes minimal album info and track
+/// metadata derived from the album source (codec and quality).
 @ApplicationScoped
 public class LclTrackService extends LclProviderService {
 
@@ -46,13 +44,11 @@ public class LclTrackService extends LclProviderService {
     @Inject
     AlbumRepository repository;
 
-    /**
-     * Retrieves a track by its provider-facing id.
-     *
-     * @param trackId provider-facing track id
-     * @return track detail for the requested id
-     * @throws NotFoundException when the track does not exist
-     */
+    /// Retrieves a track by its provider-facing id.
+    ///
+    /// @param trackId provider-facing track id
+    /// @return track detail for the requested id
+    /// @throws NotFoundException when the track does not exist
     public Uni<TrackDetail> getTrackById(String trackId) {
         ObjectId id = new ObjectId(parsedId(trackId));
         LOG.debugf("LCL track lookup started: trackId=%s", trackId);
@@ -99,7 +95,7 @@ public class LclTrackService extends LclProviderService {
                 .onItem().transformToMulti(AsyncFile::toMulti);
     }
 
-    /** Maps local album/track entities into a provider track detail DTO. */
+    ///  Maps local album/track entities into a provider track detail DTO.
     private TrackDetail map(QAlbum album, QTrack track, QSource source) {
         String streamTrackId = track.filePath != null ? formatId(track._id) : track.sourceId;
         String streamQuality = track.filePath != null ? "DEFAULT" : album.source.format;

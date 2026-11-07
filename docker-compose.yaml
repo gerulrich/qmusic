@@ -1,0 +1,38 @@
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - proxy-public
+    depends_on:
+      - qauth
+      - qmusic
+
+  qauth:
+    image: gerulrich/qauth:0.0.5
+    env_file:
+      - .env
+    volumes:
+      - ./src/main/resources/secret.jwk:/work/secret.jwk
+    networks:
+      - proxy-public
+
+  qmusic:
+    build:
+      context: .
+      dockerfile: Dockerfile.jvm
+    env_file:
+      - .env
+    volumes:
+      - ./src/main/resources/secret.jwk:/work/secret.jwk
+    networks:
+      - proxy-public
+    ports:
+      - "8005:8005"
+
+networks:
+  proxy-public:
+    name: proxy-public

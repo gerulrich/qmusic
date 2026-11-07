@@ -8,16 +8,12 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.hasSize;
 
-/**
- * Integration tests for {@link SourcesResource}.
- */
+/// Integration tests for {@link SourcesResource}.
 @QuarkusTest
 class SourcesResourceTest {
 
-    /**
-     * Test that the GET /music/sources endpoint returns HTTP 200
-     * and the expected audio sources.
-     */
+    /// Test that the GET /music/sources endpoint returns HTTP 200
+    /// and the expected audio sources.
     @Test
     @TestSecurity(user = "test-user")
     void testListSourcesEndpoint() {

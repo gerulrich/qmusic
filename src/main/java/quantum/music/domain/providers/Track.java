@@ -2,20 +2,18 @@ package quantum.music.domain.providers;
 
 import java.util.List;
 
-/**
- * Provider-agnostic track data returned by any music provider implementation.
- *
- * @param id provider-facing track id
- * @param title track title
- * @param duration track duration in seconds
- * @param trackNumber track index within the album
- * @param volumeNumber disc or volume number within the release
- * @param codec audio codec from the source
- * @param quality audio quality descriptor from the source
- * @param tags provider-specific tags such as format and quality
- * @param version optional version label (e.g., Remaster)
- * @param copyright copyright notice
- */
+/// Provider-agnostic track data returned by any music provider implementation.
+///
+/// @param id provider-facing track id
+/// @param title track title
+/// @param duration track duration in seconds
+/// @param trackNumber track index within the album
+/// @param volumeNumber disc or volume number within the release
+/// @param codec audio codec from the source
+/// @param quality audio quality descriptor from the source
+/// @param tags provider-specific tags such as format and quality
+/// @param version optional version label (e.g., Remaster)
+/// @param copyright copyright notice
 public record Track(
         String id,
         String title,
@@ -33,6 +31,7 @@ public record Track(
         return new Builder();
     }
 
+    /// Builds a track value.
     public static final class Builder {
         private String id;
         private String title;

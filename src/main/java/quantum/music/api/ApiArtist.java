@@ -2,9 +2,7 @@ package quantum.music.api;
 
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
-/**
- * Represents a music artist containing metadata such as name and picture.
- */
+/// Represents a music artist containing metadata such as name and picture.
 @Schema(name = "Artist", description = "A music artist containing metadata such as name and picture.")
 public final class ApiArtist {
 
@@ -62,9 +60,7 @@ public final class ApiArtist {
         return albums;
     }
 
-    /**
-     * Builder for {@link ApiArtist}.
-     */
+    /// Builder for {@link ApiArtist}.
     public static final class Builder {
         private String id;
         private String name;
@@ -85,57 +81,43 @@ public final class ApiArtist {
             this.albums = template.albums;
         }
 
-        /**
-         * Sets the identifier.
-         */
+        /// Sets the identifier.
         public Builder id(String id) {
             this.id = id;
             return this;
         }
 
-        /**
-         * Sets the name.
-         */
+        /// Sets the name.
         public Builder name(String name) {
             this.name = name;
             return this;
         }
 
-        /**
-         * Sets the biography snippet.
-         */
+        /// Sets the biography snippet.
         public Builder bio(String bio) {
             this.bio = bio;
             return this;
         }
 
-        /**
-         * Sets the picture URL.
-         */
+        /// Sets the picture URL.
         public Builder picture(String picture) {
             this.picture = picture;
             return this;
         }
 
-        /**
-         * Sets the canonical link.
-         */
+        /// Sets the canonical link.
         public Builder link(String link) {
             this.link = link;
             return this;
         }
 
-        /**
-         * Sets the albums link.
-         */
+        /// Sets the albums link.
         public Builder albums(String albums) {
             this.albums = albums;
             return this;
         }
 
-        /**
-         * Creates an immutable {@link ApiArtist}.
-         */
+        /// Creates an immutable {@link ApiArtist}.
         public ApiArtist build() {
             return new ApiArtist(this);
         }

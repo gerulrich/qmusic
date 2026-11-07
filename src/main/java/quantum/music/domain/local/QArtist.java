@@ -4,41 +4,27 @@ import io.quarkus.mongodb.panache.common.MongoEntity;
 import org.bson.codecs.pojo.annotations.BsonProperty;
 import org.bson.types.ObjectId;
 
-/**
- * Artist entity stored in the local MongoDB collection.
- */
+/// Artist entity stored in the local MongoDB collection.
 @MongoEntity(collection="artists")
 public class QArtist {
 
-    /**
-     * Unique identifier for the artist document in MongoDB.
-     */
+    /// Unique identifier for the artist document in MongoDB.
     public ObjectId id;
-    /**
-     * Display name of the artist.
-     */
+    /// Display name of the artist.
     public String name;
 
-    /**
-     * Short biography or description text.
-     */
+    /// Short biography or description text.
     public String bio;
 
-    /**
-     * Internal document version field.
-     */
+    /// Internal document version field.
     @BsonProperty("__v")
     public int version;
 
-    /**
-     * Normalized artist name for search/matching.
-     */
+    /// Normalized artist name for search/matching.
     @BsonProperty("name_normalized")
     public String nameNormalized;
 
-    /**
-     * Alternate names or variations used for matching.
-     */
+    /// Alternate names or variations used for matching.
     @BsonProperty("name_variations")
     public java.util.List<String> nameVariations;
 }
