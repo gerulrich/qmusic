@@ -16,6 +16,7 @@ import quantum.music.repository.AlbumRepository;
 
 import java.util.List;
 
+/// Provides music catalog and playback operations backed by the local library.
 @ApplicationScoped
 public class LclMusicProvider implements MusicProvider {
 
@@ -52,6 +53,11 @@ public class LclMusicProvider implements MusicProvider {
     @Override
     public Uni<PagedResponse<Album>> search(String q, int offset, int limit) {
         return searchService.search(q, offset, limit);
+    }
+
+    @Override
+    public Uni<PagedResponse<Artist>> searchArtists(String q, int offset, int limit) {
+        return searchService.searchArtists(q, offset, limit);
     }
 
     @Override

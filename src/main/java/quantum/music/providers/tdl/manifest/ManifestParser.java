@@ -24,6 +24,7 @@ import org.w3c.dom.NodeList;
 
 import static io.quarkus.arc.ComponentsProvider.LOG;
 
+/// Parses TDL BTS and DASH manifests into media URLs and encryption metadata.
 @ApplicationScoped
 public class ManifestParser {
 
@@ -31,6 +32,12 @@ public class ManifestParser {
     private static final String MIME_TYPE_DASH_XML = "application/dash+xml";
     private static final String ENCRYPTION_NONE = "NONE";
 
+    /// Parses a supported media manifest.
+    ///
+    /// @param manifestMimeType manifest media type
+    /// @param manifest Base64-encoded manifest content
+    /// @return the extracted media URLs and encryption metadata
+    /// @throws WebApplicationException if the manifest type is unsupported
     public MediaInfo parse(String manifestMimeType, String manifest) {
         return switch (manifestMimeType) {
             case MIME_TYPE_TIDAL_BTS -> parseBtsManifest(manifest);

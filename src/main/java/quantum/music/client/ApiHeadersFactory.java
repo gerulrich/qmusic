@@ -9,6 +9,7 @@ import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.MultivaluedMap;
 import quantum.music.service.TokenService;
 
+/// Adds the origin and bearer token required by requests to the TDL API.
 @ApplicationScoped
 public class ApiHeadersFactory implements ClientHeadersFactory {
 

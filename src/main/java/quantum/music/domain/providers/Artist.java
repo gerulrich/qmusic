@@ -1,12 +1,10 @@
 package quantum.music.domain.providers;
 
-/**
- * Provider-agnostic artist data returned by any music provider implementation.
- *
- * @param id provider-facing artist id
- * @param name artist name
- * @param bio optional artist biography
- */
+/// Provider-agnostic artist data returned by any music provider implementation.
+///
+/// @param id provider-facing artist id
+/// @param name artist name
+/// @param bio optional artist biography
 public record Artist(String id, String name, String bio, String picture) {
 
     public static Builder builder() {

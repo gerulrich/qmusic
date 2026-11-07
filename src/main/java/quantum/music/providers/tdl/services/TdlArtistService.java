@@ -1,7 +1,6 @@
 package quantum.music.providers.tdl.services;
 
 import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.tuples.Tuple2;
 import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -10,6 +9,7 @@ import quantum.music.client.ApiClient;
 import quantum.music.domain.providers.Artist;
 import quantum.music.service.TokenService;
 
+/// Retrieves and maps artist details from the TDL API.
 @ApplicationScoped
 public class TdlArtistService extends TldAbstractService {
 
@@ -20,24 +20,28 @@ public class TdlArtistService extends TldAbstractService {
     @Inject
     TokenService tokenService;
 
+    /// Gets an artist, including the artist biography when available.
+    ///
+    /// @param artistId provider-specific artist identifier
+    /// @return the artist details
     public Uni<Artist> getArtistById(String artistId) {
-        return tokenService.withToken(() -> {
-                    Uni<JsonObject> artist = client.artist(parsedId(artistId));
-                    Uni<JsonObject> bio = client.bio(parsedId(artistId))
-                            .onFailure().recoverWithItem(new JsonObject().put("text", ""));
-                    return Uni.combine().all().unis(artist, bio).asTuple().map(this::map);
-                });
+        return tokenService.withToken(() -> fetch(artistId));
     }
 
-    private Artist map(Tuple2<JsonObject, JsonObject> tuple) {
-        JsonObject artistJson = tuple.getItem1();
-        JsonObject bioJson = tuple.getItem2();
+    private Uni<Artist> fetch(String artistId) {
+        Uni<JsonObject> bio = client.bio(parsedId(artistId))
+                .onFailure()
+                .recoverWithItem(new JsonObject().put("text", ""));
+        Uni<JsonObject> artist = client.artist(parsedId(artistId));
+        return Uni.combine().all().unis(artist, bio).with(this::map);
+    }
+
+    private Artist map(JsonObject artist, JsonObject bio) {
         return Artist.builder()
-                .id(formatId(artistJson.getLong("id")))
-                .name(artistJson.getString("name"))
-                .bio(bioJson.getString("text").replaceAll("\\[.*?\\]", ""))
-                .picture(formatImageUrl(artistJson.getString("picture"), ARTIST_RESOLUTION))
-                .build();
+            .id(formatId(artist.getLong("id")))
+            .name(artist.getString("name"))
+            .bio(bio.getString("text").replaceAll("\\[.*?\\]", ""))
+            .picture(formatImageUrl(artist.getString("picture"), ARTIST_RESOLUTION))
+            .build();
     }
-
 }

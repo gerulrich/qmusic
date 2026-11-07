@@ -8,80 +8,103 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
 
 import static io.quarkus.arc.ComponentsProvider.LOG;
 
+/// Decrypts the byte stream produced by another {@link FileStreamer}.
 public class DecryptingFileStreamer implements FileStreamer {
 
     private final FileStreamer delegate;
     private final String keyId;
     private final String masterKey;
 
+    /// Creates a decrypting streamer for the supplied encrypted file stream.
+    ///
+    /// @param delegate the streamer that supplies encrypted data
+    /// @param keyId the Base64-encoded security token containing the stream key and nonce
+    /// @param masterKey the Base64-encoded key used to decrypt the security token
     public DecryptingFileStreamer(FileStreamer delegate, String keyId, String masterKey) {
         this.delegate = delegate;
         this.keyId = keyId;
         this.masterKey = masterKey;
     }
 
+    /// Returns the decrypted stream.
+    ///
+    /// The security token is decrypted before the delegate stream is subscribed to. The Mutiny
+    /// operators preserve downstream demand and propagate cancellation to the delegate.
+    ///
+    /// @return a stream of decrypted buffers
+    /// @throws RuntimeException if the security token cannot be decrypted
     @Override
     public Multi<Buffer> stream() {
         DecryptionKeys dk = decryptSecurityToken(keyId, masterKey);
         if (dk.nonce().length != 8) {
+            // TODO cambiar mensaje, ya que el user de la api no puede hacer nada respecto a esto
             return Multi.createFrom().failure(new IllegalArgumentException("Nonce must be 8 bytes long."));
         }
 
-        return Multi.createFrom().emitter(emitter -> {
+        return Multi.createFrom().deferred(() -> {
             final Cipher cipher;
             try {
                 cipher = initCipher(dk.key(), dk.nonce());
             } catch (RuntimeException e) {
-                emitter.fail(e);
-                return;
+                return Multi.createFrom().failure(e);
             }
 
-            delegate.stream().subscribe().with(
-                buffer -> {
-                    if (emitter.isCancelled()) {
-                        return;
-                    }
-                    try {
-                        byte[] decryptedBytes = cipher.update(buffer.getBytes());
-                        if (decryptedBytes != null && decryptedBytes.length > 0) {
-                            emitter.emit(Buffer.buffer(decryptedBytes));
-                        }
-                    } catch (Exception e) {
-                        if (!emitter.isCancelled()) {
-                            LOG.errorf(e, "Error decrypting stream chunk");
-                            emitter.fail(e);
-                        }
-                    }
-                },
-                failure -> {
-                    if (!emitter.isCancelled()) {
-                        emitter.fail(failure);
-                    }
-                },
-                () -> {
-                    if (emitter.isCancelled()) {
-                        return;
-                    }
-                    try {
-                        byte[] finalBytes = cipher.doFinal();
-                        if (finalBytes != null && finalBytes.length > 0) {
-                            emitter.emit(Buffer.buffer(finalBytes));
-                        }
-                        emitter.complete();
-                    } catch (Exception e) {
-                        if (!emitter.isCancelled()) {
-                            LOG.errorf(e, "Error finalizing decryption");
-                            emitter.fail(e);
-                        }
-                    }
-                }
-            );
+            return delegate.stream()
+                .onItem().transform(buffer -> decryptChunk(buffer, cipher))
+                .select().where(Optional::isPresent)
+                .onItem().transform(Optional::get)
+                .onCompletion().continueWith(() -> complete(cipher));
         });
     }
 
+    /// Decrypts one encrypted stream chunk.
+    ///
+    /// @param buffer the encrypted chunk
+    /// @param cipher the initialized stream cipher
+    /// @return the decrypted buffer, or an empty optional when the cipher produces no bytes
+    private static Optional<Buffer> decryptChunk(Buffer buffer, Cipher cipher) {
+        try {
+            byte[] decryptedBytes = cipher.update(buffer.getBytes());
+            if (decryptedBytes == null || decryptedBytes.length == 0) {
+                return Optional.empty();
+            }
+            return Optional.of(Buffer.buffer(decryptedBytes));
+        } catch (Exception e) {
+            LOG.errorf(e, "Error decrypting stream chunk");
+            throw new RuntimeException("Error decrypting stream chunk", e);
+        }
+    }
+
+    /// Finalizes decryption after the delegate completes.
+    ///
+    /// @param cipher the cipher used to decrypt the stream
+    /// @return any remaining decrypted bytes
+    /// @throws RuntimeException if decryption cannot be finalized
+    private static Iterable<Buffer> complete(Cipher cipher) {
+        try {
+            byte[] finalBytes = cipher.doFinal();
+            return finalBytes != null && finalBytes.length > 0
+                ? List.of(Buffer.buffer(finalBytes))
+                : List.of();
+        } catch (Exception e) {
+            LOG.errorf(e, "Error finalizing decryption");
+            throw new RuntimeException("Error finalizing decryption", e);
+        }
+    }
+
+    /// Creates and initializes the AES-CTR cipher for the stream.
+    ///
+    /// The 8-byte nonce is extended to the 16-byte IV expected by AES.
+    ///
+    /// @param key the AES stream key
+    /// @param nonce the 8-byte stream nonce
+    /// @return an initialized cipher in decryption mode
+    /// @throws RuntimeException if the cipher cannot be initialized
     private Cipher initCipher(byte[] key, byte[] nonce) {
         try {
             byte[] extendedNonce = new byte[16];
@@ -100,14 +123,15 @@ public class DecryptingFileStreamer implements FileStreamer {
         }
     }
 
-    /**
-     * Decrypts the security token using the master key.
-     * This method extracts the decryption key and nonce from an encrypted security token.
-     *
-     * @param securityToken The base64-encoded security token to decrypt
-     * @param masterKey The base64-encoded master key
-     * @return The decryption keys containing the key and nonce
-     */
+    /// Decrypts the security token with the master key and extracts its stream key and nonce.
+    ///
+    /// The token contains a 16-byte IV followed by AES-CBC ciphertext. The decrypted payload
+    /// starts with a 16-byte stream key followed by an 8-byte nonce.
+    ///
+    /// @param securityToken the Base64-encoded security token
+    /// @param masterKey the Base64-encoded master key
+    /// @return the stream decryption key and nonce
+    /// @throws RuntimeException if the token is malformed or cannot be decrypted
     private DecryptionKeys decryptSecurityToken(String securityToken, String masterKey) {
         try {
             byte[] masterKeyBytes = Base64.getDecoder().decode(masterKey);
@@ -138,4 +162,3 @@ public class DecryptingFileStreamer implements FileStreamer {
         }
     }
 }
-

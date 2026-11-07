@@ -29,6 +29,7 @@ import java.util.stream.Stream;
 
 import static io.quarkus.arc.ComponentsProvider.LOG;
 
+/// Retrieves TDL track metadata and streams track audio.
 @ApplicationScoped
 public class TdlTrackService extends TldAbstractService  {
 
@@ -59,60 +60,68 @@ public class TdlTrackService extends TldAbstractService  {
         httpClient = vertx.createHttpClient();
     }
 
-    public Uni<TrackDetail> getTrackById(String trackId) {
-        LOG.debugf("Retrieving track details for: %s", trackId);
-        return tokenService.withToken(() -> apiClient.track(parsedId(trackId))
-                .onItem().ifNull().failWith(() -> new NotFoundException("Track not found: " + trackId))
-                .onItem().transform(json -> {
-                    JsonObject albumNode = json.getJsonObject("album");
-                    JsonObject artistNode = json.getJsonObject("artist");
-                    List<String> tags = json.getJsonObject("mediaMetadata")
-                        .getJsonArray("tags")
-                        .stream()
-                        .map(Object::toString)
-                        .toList();
-                    return new TrackDetail(
-                            Album.builder()
-                                .id(formatId(albumNode.getLong("id")))
-                                .title(albumNode.getString("title"))
-                                .artist(
-                                    Artist.builder()
+    private Uni<JsonObject> fetch(String trackId) {
+        return apiClient.track(parsedId(trackId))
+                .onFailure().recoverWithNull();
+    }
+
+    private TrackDetail map(JsonObject trackJson) {
+        String trackId = trackJson.getString("id");
+        JsonObject albumNode = trackJson.getJsonObject("album");
+        JsonObject artistNode = trackJson.getJsonObject("artist");
+        List<String> tags = trackJson.getJsonObject("mediaMetadata")
+                .getJsonArray("tags")
+                .stream()
+                .map(Object::toString)
+                .toList();
+        return new TrackDetail(
+                Album.builder()
+                        .id(formatId(albumNode.getLong("id")))
+                        .title(albumNode.getString("title"))
+                        .artist(
+                                Artist.builder()
                                         .id(formatId(artistNode.getLong("id")))
                                         .name(artistNode.getString("name"))
-                                    .build()
-                                )
-                                .cover(formatImageUrl(albumNode.getString("cover"), COVER_RESOLUTION))
-                                .build()
-                            ,
-                            Track.builder()
-                                .id(formatId(json.getLong("id")))
-                                .title(json.getString("title"))
-                                .duration(json.getInteger("duration"))
-                                .trackNumber(json.getInteger("trackNumber"))
-                                .volumeNumber(json.getInteger("volumeNumber"))
-                                .codec(json.getString("audioCodec"))
-                                .quality(json.getString("audioQuality"))
-                                .tags(tags)
-                                .streams(Stream.concat(
-                                    Stream.of(
+                                        .build()
+                        )
+                        .cover(formatImageUrl(albumNode.getString("cover"), COVER_RESOLUTION))
+                        .build()
+                ,
+                Track.builder()
+                        .id(formatId(trackJson.getLong("id")))
+                        .title(trackJson.getString("title"))
+                        .duration(trackJson.getInteger("duration"))
+                        .trackNumber(trackJson.getInteger("trackNumber"))
+                        .volumeNumber(trackJson.getInteger("volumeNumber"))
+                        .codec(trackJson.getString("audioCodec"))
+                        .quality(trackJson.getString("audioQuality"))
+                        .tags(tags)
+                        .streams(Stream.concat(
+                                Stream.of(
                                         TrackStream.builder().quality("LOW")
-                                            .url("tracks/" + trackId + "/stream?quality=LOW")
-                                            .build(),
+                                                .url("tracks/" + trackId + "/stream?quality=LOW")
+                                                .build(),
                                         TrackStream.builder().quality("HIGH")
-                                            .url("tracks/" + trackId + "/stream?quality=HIGH")
-                                            .build()
-                                    ),
-                                    tags.stream().distinct().map(tag -> TrackStream.builder().quality(tag)
+                                                .url("tracks/" + trackId + "/stream?quality=HIGH")
+                                                .build()
+                                ),
+                                tags.stream().distinct().map(tag -> TrackStream.builder().quality(tag)
                                         .url("tracks/" + trackId + "/stream?quality=" + tag)
                                         .build()
-                                        )
-                                ).toList())
-                                .version(json.getString("version"))
-                                .copyright(json.getString("copyright"))
-                                .build()
-                    );
-                })
-                .onFailure().invoke(e -> LOG.errorf(e, "Error getting track: %s", trackId)));
+                                )
+                        ).toList())
+                        .version(trackJson.getString("version"))
+                        .copyright(trackJson.getString("copyright"))
+                        .build()
+        );
+    }
+
+    public Uni<TrackDetail> getTrackById(String trackId) {
+        LOG.debugf("Retrieving track details for: %s", trackId);
+        return tokenService.withToken(() -> fetch(trackId))
+            .onItem().ifNull().failWith(() -> new NotFoundException("Track not found: " + trackId))
+            .onItem().transform(this::map)
+            .onFailure().invoke(e -> LOG.errorf(e, "Error getting track: %s", trackId));
     }
 
     public Uni<MediaInfo> content(String track, String codec, String quality, String presentation) {
@@ -128,12 +137,10 @@ public class TdlTrackService extends TldAbstractService  {
                 .onFailure().invoke(e -> LOG.errorf(e, "Error getting content for track: %s", track)));
     }
 
-    /**
-     * Proxies a file from a given URL.
-     *
-     * @param mediaInfo Media information containing the URL and encryption type
-     * @return A Multi emitting the file's content as Buffer
-     */
+    /// Proxies a file from a given URL.
+    ///
+    /// @param mediaInfo Media information containing the URL and encryption type
+    /// @return A Multi emitting the file's content as Buffer
     public Multi<Buffer> streamFile(MediaInfo mediaInfo) {
         String encryption = mediaInfo.encryption();
         FileStreamer base;

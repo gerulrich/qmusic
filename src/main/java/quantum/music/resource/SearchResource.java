@@ -20,37 +20,32 @@ import quantum.music.api.Response;
 import quantum.music.mappers.Mapper;
 import quantum.music.service.ProviderService;
 
+/// REST endpoints for searching music catalogs.
 @Path("/music")
 @Produces(MediaType.APPLICATION_JSON)
 @Tag(name = "Search", description = "Search for albums across music sources")
 public class SearchResource extends Mapper {
 
-    /**
-     * Service for interacting with music provider implementations.
-     */
+    /// Service for interacting with music provider implementations.
     @Inject
     ProviderService providerService;
 
-    /**
-     * Searches for albums matching the specified query across music sources.
-     * <p>
-     * This endpoint performs a search operation on the selected source using
-     * the provided query string. Results are paginated to manage large result sets
-     * efficiently. Each album in the response includes complete metadata, artist
-     * information, and dynamically constructed URIs for accessing related resources.
-     * </p>
-     * <p>
-     * The search is performed reactively using Mutiny's Uni to ensure non-blocking
-     * operation and optimal resource utilization.
-     * </p>
-     *
-     * @param uriInfo  The URI context information used to construct resource links
-     * @param provider The source that provides the music catalog and streams (default: "tdl")
-     * @param query    The search query string to match against album and artist names
-     * @param offset   The starting position in the result set (default: 0)
-     * @param limit    The maximum number of results to return (default: 10)
-     * @return A Uni emitting an ItemsResponse containing the paginated search results
-     */
+    /// Searches for albums matching the specified query across music sources.
+    ///
+    /// This endpoint performs a search operation on the selected source using
+    /// the provided query string. Results are paginated to manage large result sets
+    /// efficiently. Each album in the response includes complete metadata, artist
+    /// information, and dynamically constructed URIs for accessing related resources.
+    ///
+    /// The search is performed reactively using Mutiny's Uni to ensure non-blocking
+    /// operation and optimal resource utilization.
+    ///
+    /// @param uriInfo  The URI context information used to construct resource links
+    /// @param provider The source that provides the music catalog and streams (default: "tdl")
+    /// @param query    The search query string to match against album and artist names
+    /// @param offset   The starting position in the result set (default: 0)
+    /// @param limit    The maximum number of results to return (default: 10)
+    /// @return A Uni emitting an ItemsResponse containing the paginated search results
     @GET
     @Path("/search")
     @Operation(

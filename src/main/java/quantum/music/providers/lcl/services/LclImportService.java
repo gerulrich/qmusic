@@ -20,9 +20,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Consumes album import messages and persists the metadata locally.
- */
+/// Consumes album import messages and persists the metadata locally.
 @ApplicationScoped
 public class LclImportService {
 
@@ -78,9 +76,8 @@ public class LclImportService {
     }
 
     private static String normalizeName(String value) {
-        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
-        return normalized.replaceAll("[^A-Za-z0-9]", "").toLowerCase();
+        return Normalizer.normalize(value, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
+                .replaceAll("[^A-Za-z0-9]", "").toLowerCase();
     }
 
     private QAlbum mapAlbum(AlbumImportMessage message, Album album, QArtist artist) {

@@ -2,18 +2,16 @@ package quantum.music.domain.providers;
 
 import java.util.List;
 
-/**
- * Provider-agnostic album data returned by any music provider implementation.
- *
- * @param id provider-facing album id
- * @param title album title
- * @param artist primary artist metadata
- * @param release release date or year
- * @param copyright copyright notice
- * @param type album type (e.g., ALBUM)
- * @param cover cover image URL
- * @param tags provider-specific tags such as format and quality
- */
+/// Provider-agnostic album data returned by any music provider implementation.
+///
+/// @param id provider-facing album id
+/// @param title album title
+/// @param artist primary artist metadata
+/// @param release release date or year
+/// @param copyright copyright notice
+/// @param type album type (e.g., ALBUM)
+/// @param cover cover image URL
+/// @param tags provider-specific tags such as format and quality
 public record Album(
         String id,
         String title,
@@ -29,6 +27,7 @@ public record Album(
         return new Builder();
     }
 
+    /// Builds an album value.
     public static final class Builder {
         private String id;
         private String title;

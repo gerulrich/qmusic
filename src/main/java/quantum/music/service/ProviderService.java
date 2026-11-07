@@ -13,35 +13,29 @@ import java.util.Map;
 
 import jakarta.ws.rs.NotFoundException;
 
-/**
- * Service for managing and retrieving music providers by their IDs.
- * <p>
- * Provides methods to register and fetch {@link MusicProvider} instances
- * based on provider or resource IDs. Returns 404 (NotFoundException) if a provider is not found.
- */
+/// Service for managing and retrieving music providers by their IDs.
+///
+/// Provides methods to register and fetch {@link MusicProvider} instances
+/// based on provider or resource IDs. Returns 404 (NotFoundException) if a provider is not found.
 @ApplicationScoped
 public class ProviderService {
 
     private final Map<String, MusicProvider> providers = new HashMap<>();
 
-    /**
-     * Constructs the ProviderService and registers available music providers.
-     *
-     * @param tdlMusicProvider the TDL music provider instance
-     * @param lclMusicProvider the LCL music provider instance
-     */
+    /// Constructs the ProviderService and registers available music providers.
+    ///
+    /// @param tdlMusicProvider the TDL music provider instance
+    /// @param lclMusicProvider the LCL music provider instance
     public ProviderService(TdlMusicProvider tdlMusicProvider, LclMusicProvider lclMusicProvider) {
         providers.put(tdlMusicProvider.getProviderId(), tdlMusicProvider);
         providers.put(lclMusicProvider.getProviderId(), lclMusicProvider);
     }
 
-    /**
-     * Retrieves a music provider based on a resource ID in the format "providerId:resourceId".
-     *
-     * @param resourceId the resource ID string
-     * @return a Uni emitting the found MusicProvider, or failing with NotFoundException if not found
-     * @throws IllegalArgumentException if the resource ID format is invalid
-     */
+    /// Retrieves a music provider based on a resource ID in the format "providerId:resourceId".
+    ///
+    /// @param resourceId the resource ID string
+    /// @return a Uni emitting the found MusicProvider, or failing with NotFoundException if not found
+    /// @throws IllegalArgumentException if the resource ID format is invalid
     public Uni<MusicProvider> fromId(String resourceId) {
         String[] parts = resourceId.split(":", 2);
         if (parts.length != 2) {
@@ -55,12 +49,10 @@ public class ProviderService {
         return Uni.createFrom().item(provider);
     }
 
-    /**
-     * Retrieves a music provider by its provider ID.
-     *
-     * @param providerId the provider ID
-     * @return a Uni emitting the found MusicProvider, or failing with NotFoundException if not found
-     */
+    /// Retrieves a music provider by its provider ID.
+    ///
+    /// @param providerId the provider ID
+    /// @return a Uni emitting the found MusicProvider, or failing with NotFoundException if not found
     public Uni<MusicProvider> getProvider(String providerId) {
         MusicProvider provider = providers.get(providerId);
         if (provider == null) {
@@ -69,9 +61,12 @@ public class ProviderService {
         return Uni.createFrom().item(provider);
     }
 
+    /// Retrieves a list of all registered music providers as tuples containing provider ID, name, and capabilities.
+    ///
+    /// @return a list of tuples, each containing the provider ID, name, and capabilities
     public List<Tuple3<String,String, List<String>>> getProviders() {
         return providers.values().stream()
-                .map(provider -> Tuple3.of(provider.getProviderId(), provider.getProviderName(), provider.getCapabilities()))
+                .map(p -> Tuple3.of(p.getProviderId(), p.getProviderName(), p.getCapabilities()))
                 .toList();
     }
 

@@ -4,6 +4,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import static java.lang.String.format;
 
+/// Shared identifier and image URL helpers for TDL services.
 public abstract class TldAbstractService {
 
 
@@ -21,12 +22,10 @@ public abstract class TldAbstractService {
         return album.replace("tdl:", "");
     }
 
-    /**
-     * Formats a cover URL using the configured pattern.
-     *
-     * @param image The cover identifier
-     * @return The formatted cover URL
-     */
+    /// Formats a cover URL using the configured pattern.
+    ///
+    /// @param image The cover identifier
+    /// @return The formatted cover URL
     protected String formatImageUrl(String image, String resolution) {
         if (image == null || image.isBlank()) {
             return null;
