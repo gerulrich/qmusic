@@ -14,6 +14,10 @@ public abstract class TldAbstractService {
     @ConfigProperty(name = "tdl.image.url")
     protected String imageUrl;
 
+    protected String formatId(String id) {
+        return String.format("tdl:%s", id);
+    }
+
     protected String formatId(Long id) {
         return String.format("tdl:%d", id);
     }

@@ -99,14 +99,14 @@ public class TdlTrackService extends TldAbstractService  {
                         .streams(Stream.concat(
                                 Stream.of(
                                         TrackStream.builder().quality("LOW")
-                                                .url("tracks/" + trackId + "/stream?quality=LOW")
+                                                .url("tracks/" + formatId(trackId) + "/stream?quality=LOW")
                                                 .build(),
                                         TrackStream.builder().quality("HIGH")
-                                                .url("tracks/" + trackId + "/stream?quality=HIGH")
+                                                .url("tracks/" + formatId(trackId) + "/stream?quality=HIGH")
                                                 .build()
                                 ),
                                 tags.stream().distinct().map(tag -> TrackStream.builder().quality(tag)
-                                        .url("tracks/" + trackId + "/stream?quality=" + tag)
+                                        .url("tracks/" + formatId(trackId) + "/stream?quality=" + tag)
                                         .build()
                                 )
                         ).toList())
