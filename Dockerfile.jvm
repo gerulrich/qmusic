@@ -9,7 +9,7 @@ COPY src /code/src
 RUN mvn -B package -DskipTests
 
 ## Stage 2: runtime JVM image
-FROM registry.access.redhat.com/ubi9/openjdk-25:1.24-3.1793588563
+FROM registry.access.redhat.com/ubi9/openjdk-25:1.24-3.1794341157
 
 ENV LANGUAGE='en_US:en'
 
