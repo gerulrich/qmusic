@@ -127,14 +127,14 @@ public class TdlTrackService extends TldAbstractService  {
     public Uni<MediaInfo> content(String track, String codec, String quality, String presentation) {
         LOG.debugf("Retrieving media content for track: %s with codec: %s and quality: %s", track, codec, quality);
         String q = quality.replace("HIRES", "HI_RES");
-        return tokenService.withToken(() -> apiClient.media(parsedId(track), q, MEDIA_TYPE_STREAM, presentation)
-                .onItem().ifNull().failWith(() -> new NotFoundException("Track not found: " + track))
-                .onItem().transform(json -> {
-                    LOG.debugf("Retrieving content for track: %s", parsedId(track));
-                    String manifestMimeType = json.getString("manifestMimeType");
-                    return manifestParser.parse(manifestMimeType, json.getString("manifest"));
-                })
-                .onFailure().invoke(e -> LOG.errorf(e, "Error getting content for track: %s", track)));
+        return tokenService.withToken(() -> apiClient.media(parsedId(track), q, MEDIA_TYPE_STREAM, presentation))
+            .onItem().ifNull().failWith(NotFoundException::new)
+            .onItem().transform(json -> {
+                LOG.debugf("Retrieving content for track: %s", parsedId(track));
+                String manifestMimeType = json.getString("manifestMimeType");
+                return manifestParser.parse(manifestMimeType, json.getString("manifest"));
+            })
+            .onFailure().invoke(e -> LOG.errorf(e, "Error getting content for track: %s", track));
     }
 
     /// Proxies a file from a given URL.

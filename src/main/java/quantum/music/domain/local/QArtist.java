@@ -4,6 +4,8 @@ import io.quarkus.mongodb.panache.common.MongoEntity;
 import org.bson.codecs.pojo.annotations.BsonProperty;
 import org.bson.types.ObjectId;
 
+import java.util.List;
+
 /// Artist entity stored in the local MongoDB collection.
 @MongoEntity(collection="artists")
 public class QArtist {
@@ -26,5 +28,8 @@ public class QArtist {
 
     /// Alternate names or variations used for matching.
     @BsonProperty("name_variations")
-    public java.util.List<String> nameVariations;
+    public List<String> nameVariations;
+
+    /// Vector embedding used for semantic artist search.
+    public List<Double> embedding;
 }

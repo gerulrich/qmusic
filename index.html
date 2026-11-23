@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QMusic Web Player</title>
+  <script>
+    // En qm.<dominio>, las APIs viven en api.<dominio>; en localhost son rutas relativas.
+    const apiOrigin = window.location.hostname.startsWith('qm.')
+      ? `${window.location.protocol}//${window.location.host.replace(/^qm\./, 'api.')}`
+      : '';
+    const API_CONFIG = {
+      qauth: `${apiOrigin}/auth`,
+      qmusic: `${apiOrigin}/music`
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#1DB954',
+            darkbg: '#121212',
+            cardbg: '#181818',
+            hoverbg: '#282828'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .album-actions { position: absolute; top: .5rem; right: .5rem; z-index: 10; }
+    .album-actions[open] { z-index: 20; }
+    .album-actions > summary {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      list-style: none;
+      cursor: pointer;
+      color: rgba(255, 255, 255, .7);
+      background: rgba(18, 18, 18, .3);
+      backdrop-filter: blur(6px);
+      border: none;
+      border-radius: 50%;
+      transition: background .15s, color .15s;
+    }
+    .album-actions > summary::-webkit-details-marker { display: none; }
+    .album-actions > summary:hover,
+    .album-actions[open] > summary { background: rgba(18, 18, 18, .7); color: #fff; }
+    .album-actions > summary:focus-visible,
+    .album-action:focus-visible { outline: 2px solid #1DB954; outline-offset: 3px; }
+    .album-actions-panel {
+      position: absolute;
+      top: calc(100% + .375rem);
+      right: 0;
+      width: 10.5rem;
+      padding: .25rem;
+      background: #242424;
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: .5rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+    }
+    .album-action {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      width: 100%;
+      padding: .5rem .625rem;
+      border-radius: .375rem;
+      color: #ededed;
+      font-size: .75rem;
+      line-height: 1.25rem;
+      text-align: left;
+      transition: background .15s;
+    }
+    .album-action:hover:not(:disabled) { background: #363636; }
+    .album-action:disabled { opacity: .5; cursor: not-allowed; }
+    .album-action svg { width: 1rem; height: 1rem; flex-shrink: 0; color: #a3a3a3; }
+    .player-range { accent-color: #1DB954; cursor: pointer; }
+    .player-range:disabled { opacity: .4; cursor: not-allowed; }
+    .player-range:focus-visible,
+    .player-button:focus-visible { outline: 2px solid #1DB954; outline-offset: 4px; }
+  </style>
+</head>
+<body class="bg-darkbg text-white font-sans min-h-screen flex flex-col antialiased selection:bg-brand selection:text-black">
+
+<!-- Header / Topbar -->
+<header class="h-16 border-b border-neutral-800 bg-neutral-900/90 backdrop-blur sticky top-0 z-40 px-6 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <svg class="w-8 h-8 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+    <span class="font-bold text-xl tracking-tight">QMusic</span>
+  </div>
+
+  <!-- Auth Controls -->
+  <div id="auth-section" class="flex items-center gap-4">
+    <button onclick="openModal()" class="text-sm font-semibold hover:text-brand transition">Iniciar Sesión</button>
+  </div>
+
+  <div id="user-section" class="hidden flex items-center gap-4">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-brand"></span>
+      <span id="user-display" class="text-sm font-medium text-neutral-200"></span>
+    </div>
+    <button onclick="logout()" class="text-xs border border-neutral-700 px-3 py-1.5 rounded-full hover:border-white transition">Cerrar Sesión</button>
+  </div>
+</header>
+
+<!-- Login Required Placeholder (Shown before login) -->
+<div id="login-welcome-screen" class="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
+  <div class="w-20 h-20 bg-cardbg rounded-full flex items-center justify-center text-4xl border border-neutral-800 shadow-xl">
+    🔒
+  </div>
+  <div class="space-y-2 max-w-md">
+    <h2 class="text-2xl font-bold tracking-tight">Bienvenido a QMusic</h2>
+    <p class="text-sm text-neutral-400">Para acceder al catálogo de álbumes, pistas y reproductor, debes iniciar sesión con tu cuenta.</p>
+  </div>
+  <div class="flex items-center gap-4">
+    <button onclick="openModal()" class="bg-brand text-black font-bold px-6 py-3 rounded-full hover:opacity-90 transition text-sm">Iniciar Sesión</button>
+  </div>
+</div>
+
+<!-- Main Layout (Hidden until logged in) -->
+<main id="main-app-content" class="flex-1 p-6 max-w-7xl mx-auto w-full space-y-8 pb-48 sm:pb-32 hidden">
+  <!-- Search bar -->
+  <div class="flex flex-col sm:flex-row gap-3 max-w-3xl">
+    <div class="relative flex-1">
+      <input type="search" id="search-input" oninput="searchAlbums(this.value)" placeholder="Buscar álbumes o artistas..." class="w-full bg-cardbg border border-neutral-800 rounded-full py-3 pl-12 pr-4 focus:outline-none focus:border-brand text-sm transition">
+      <svg class="w-5 h-5 absolute left-4 top-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+    </div>
+    <select id="source-select" aria-label="Fuente de origen" onchange="changeSource()" disabled class="sm:w-48 bg-cardbg border border-neutral-800 rounded-full px-4 py-3 focus:outline-none focus:border-brand text-sm transition disabled:opacity-60">
+      <option value="">Cargando fuentes...</option>
+    </select>
+  </div>
+  <p id="sources-error" role="status" class="hidden text-sm text-red-400 max-w-3xl"></p>
+
+  <!-- Albums Section -->
+  <section id="albums-section">
+    <div class="flex items-center justify-between mb-4">
+      <h2 id="albums-heading" class="text-2xl font-bold tracking-tight">Álbumes</h2>
+      <button onclick="fetchAlbums(document.getElementById('search-input').value)" class="text-xs text-neutral-400 hover:text-white">Refrescar</button>
+    </div>
+    <div id="albums-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+      <!-- Dynamic Album Cards -->
+    </div>
+    <div id="albums-pagination" class="hidden mt-6 flex items-center justify-between">
+      <span id="pagination-summary" class="text-sm text-neutral-400"></span>
+      <div class="flex gap-2">
+        <button id="previous-page" type="button" onclick="changePage(-1)" class="border border-neutral-700 px-4 py-2 rounded-full text-sm hover:border-white disabled:opacity-40 disabled:hover:border-neutral-700">Anterior</button>
+        <button id="next-page" type="button" onclick="changePage(1)" class="border border-neutral-700 px-4 py-2 rounded-full text-sm hover:border-white disabled:opacity-40 disabled:hover:border-neutral-700">Siguiente</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Album Detail Section -->
+  <section id="album-detail" class="hidden space-y-6" aria-labelledby="album-detail-title">
+    <button type="button" onclick="clearAlbumSelection()" class="text-sm text-brand hover:underline">← Volver al catálogo</button>
+    <div id="album-detail-content" class="flex flex-col sm:flex-row gap-6"></div>
+    <p id="album-detail-status" role="status" class="hidden text-sm text-red-400"></p>
+  </section>
+
+  <!-- Tracks List Section -->
+  <section>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-2xl font-bold tracking-tight" id="tracks-heading">Canciones</h2>
+      <button id="reset-filter-btn" onclick="clearAlbumSelection()" class="hidden text-xs text-brand hover:underline">Limpiar selección</button>
+    </div>
+    <div class="bg-cardbg rounded-xl border border-neutral-800 overflow-hidden">
+      <div id="tracks-list" class="divide-y divide-neutral-800/50">
+        <!-- Dynamic Track Rows -->
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-2xl font-bold tracking-tight">Cola de reproducción</h2>
+      <button id="clear-queue-btn" type="button" class="text-xs text-brand hover:underline disabled:opacity-50 disabled:cursor-not-allowed">Vaciar cola</button>
+    </div>
+    <p id="queue-status" role="status" aria-live="polite" class="hidden mb-2 text-xs text-neutral-400"></p>
+    <div id="queue-list" class="bg-cardbg rounded-xl border border-neutral-800 divide-y divide-neutral-800/50">
+      <p class="p-4 text-neutral-500 text-sm">La cola está vacía.</p>
+    </div>
+  </section>
+</main>
+
+<!-- Bottom Audio Player (Hidden until logged in) -->
+<footer id="player-bar" class="fixed bottom-0 inset-x-0 bg-neutral-900 border-t border-neutral-800 px-4 sm:px-6 py-3 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-6 z-50 hidden">
+  <div class="flex items-center gap-4 w-full sm:w-1/4 min-w-0">
+    <div class="w-12 h-12 shrink-0 bg-neutral-800 rounded flex items-center justify-center text-xl overflow-hidden" id="player-cover-box">
+      🎵
+    </div>
+    <div class="truncate">
+      <p id="player-title" class="text-sm font-semibold truncate text-white">Ninguna canción seleccionada</p>
+      <p id="player-subtitle" role="status" class="text-xs text-neutral-400 truncate">-</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col items-center gap-2 flex-1 min-w-0 sm:max-w-lg">
+    <audio id="audio-element" preload="none"></audio>
+    <button id="player-toggle" type="button" disabled aria-label="Reproducir" class="player-button w-9 h-9 rounded-full bg-brand text-black flex items-center justify-center hover:brightness-110 transition disabled:opacity-40 disabled:cursor-not-allowed">
+      <svg id="player-play-icon" aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg id="player-pause-icon" aria-hidden="true" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+    </button>
+    <div class="flex items-center gap-2">
+      <button id="player-previous" type="button" disabled aria-label="Canción anterior" class="player-button text-neutral-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed" title="Canción anterior">⏮</button>
+      <button id="player-next" type="button" disabled aria-label="Siguiente canción" class="player-button text-neutral-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed" title="Siguiente canción">⏭</button>
+    </div>
+    <div class="flex items-center gap-2 w-full text-xs text-neutral-400 tabular-nums">
+      <span id="player-elapsed">0:00</span>
+      <input id="player-progress" type="range" min="0" max="0" step="0.1" value="0" disabled aria-label="Posición de reproducción" aria-valuetext="0:00" class="player-range w-full min-w-0 h-1">
+      <span id="player-duration">--:--</span>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-end gap-2 sm:w-1/4">
+    <button id="player-mute" type="button" aria-label="Silenciar" aria-pressed="false" class="player-button text-neutral-400 hover:text-white transition">
+      <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5L6 9H3v6h3l5 4V5z"/><path id="player-volume-waves" stroke-linecap="round" d="M15 8a6 6 0 010 8m3-11a10 10 0 010 14"/><path id="player-muted-icon" class="hidden" stroke-linecap="round" d="M16 9l5 6m0-6l-5 6"/></svg>
+    </button>
+    <input id="player-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volumen" class="player-range w-16 sm:w-24 h-1">
+  </div>
+</footer>
+
+<!-- Auth Modal -->
+<div id="auth-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-cardbg border border-neutral-800 rounded-2xl w-full max-w-md p-6 space-y-6 relative shadow-2xl">
+    <button onclick="closeModal()" class="absolute top-4 right-4 text-neutral-400 hover:text-white">✕</button>
+    <h3 id="modal-title" class="text-xl font-bold">Iniciar Sesión</h3>
+
+    <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs font-semibold uppercase text-neutral-400 mb-1">Correo Electrónico (Email)</label>
+        <input type="email" id="auth-email" required class="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold uppercase text-neutral-400 mb-1">Contraseña</label>
+        <input type="password" id="auth-password" required class="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-brand">
+      </div>
+      <div id="auth-error" class="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs rounded-lg hidden"></div>
+      <button type="submit" class="w-full bg-brand text-black font-bold py-2.5 rounded-lg hover:opacity-90 transition">Continuar</button>
+    </form>
+  </div>
+</div>
+
+<!-- Application Script -->
+<script>
+  const QAUTH_URL = API_CONFIG.qauth.replace(/\/+$/, '');
+  const QMUSIC_URL = API_CONFIG.qmusic.replace(/\/+$/, '');
+
+  let jwtToken = localStorage.getItem('qmusic_jwt') || null;
+  let userEmail = localStorage.getItem('qmusic_user') || '';
+  let searchTimeout;
+  let searchController;
+  let albumController;
+  let currentOffset = 0;
+  let activeArtist = null;
+  let playbackQueue = [];
+  let currentQueueIndex = -1;
+  let activePlayRequest = 0;
+  const sourcesById = new Map();
+  const pageSize = 20;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    checkAuthState();
+    initializePlayer();
+  });
+
+  document.addEventListener('click', event => {
+    document.querySelectorAll('[data-album-menu][open]').forEach(menu => {
+      if (!menu.contains(event.target)) menu.open = false;
+    });
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll('[data-album-menu][open]').forEach(menu => {
+      menu.open = false;
+      menu.querySelector('summary').focus();
+    });
+  });
+
+  function checkAuthState() {
+    const authSection = document.getElementById('auth-section');
+    const userSection = document.getElementById('user-section');
+    const welcomeScreen = document.getElementById('login-welcome-screen');
+    const mainContent = document.getElementById('main-app-content');
+    const playerBar = document.getElementById('player-bar');
+
+    if (jwtToken) {
+      authSection.classList.add('hidden');
+      userSection.classList.remove('hidden');
+      document.getElementById('user-display').innerText = userEmail || 'Usuario Autenticado';
+
+      welcomeScreen.classList.add('hidden');
+      mainContent.classList.remove('hidden');
+      playerBar.classList.remove('hidden');
+
+      loadSources();
+    } else {
+      authSection.classList.remove('hidden');
+      userSection.classList.add('hidden');
+
+      welcomeScreen.classList.remove('hidden');
+      mainContent.classList.add('hidden');
+      playerBar.classList.add('hidden');
+    }
+  }
+
+  function openModal() {
+    document.getElementById('modal-title').innerText = 'Iniciar Sesión (qauth)';
+    document.getElementById('auth-modal').classList.remove('hidden');
+    document.getElementById('auth-error').classList.add('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('auth-modal').classList.add('hidden');
+  }
+
+  async function handleAuthSubmit(e) {
+    e.preventDefault();
+    const emailVal = document.getElementById('auth-email').value;
+    const passVal = document.getElementById('auth-password').value;
+    const errorEl = document.getElementById('auth-error');
+    errorEl.classList.add('hidden');
+
+    try {
+      const res = await fetch(`${QAUTH_URL}/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailVal, password: passVal })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'Credenciales o datos inválidos');
+      }
+
+      const data = await res.json();
+
+      const token = typeof data === 'string' ? data : data?.token ?? data?.access_token;
+      if (typeof token !== 'string' || !token.trim() || token === '[object Object]') {
+        throw new Error('qauth no devolvió un token válido. Inicia sesión nuevamente.');
+      }
+      jwtToken = token.trim();
+      userEmail = emailVal;
+      localStorage.setItem('qmusic_jwt', jwtToken);
+      localStorage.setItem('qmusic_user', userEmail);
+
+      checkAuthState();
+      closeModal();
+    } catch (err) {
+      errorEl.innerText = err.message;
+      errorEl.classList.remove('hidden');
+    }
+  }
+
+  function logout() {
+    clearAlbumSelection();
+    jwtToken = null;
+    userEmail = '';
+    localStorage.removeItem('qmusic_jwt');
+    localStorage.removeItem('qmusic_user');
+    checkAuthState();
+  }
+
+  function getAuthHeaders() {
+    if (typeof jwtToken !== 'string' || !jwtToken.trim() || jwtToken === '[object Object]') {
+      logout();
+      throw new Error('Debes iniciar sesión para acceder a /music.');
+    }
+    const headers = { 'Accept': 'application/json' };
+    if (jwtToken) {
+      headers['Authorization'] = `Bearer ${jwtToken}`;
+    }
+    return headers;
+  }
+
+  async function loadSources() {
+    const select = document.getElementById('source-select');
+    const status = document.getElementById('sources-error');
+    select.disabled = true;
+    sourcesById.clear();
+    status.classList.add('hidden');
+
+    try {
+      const res = await fetch(`${QMUSIC_URL}/sources`, { headers: getAuthHeaders() });
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+      if (!res.ok) throw new Error('No se pudieron cargar las fuentes de música.');
+
+      const sources = await res.json();
+      if (!Array.isArray(sources)) throw new Error('La respuesta de fuentes no tiene un formato válido.');
+
+      const availableSources = sources.filter(source =>
+              source && typeof source.id === 'string' && typeof source.name === 'string'
+      );
+      if (availableSources.length === 0) throw new Error('No hay fuentes de música disponibles.');
+
+      select.innerHTML = '';
+      availableSources.forEach(source => {
+        sourcesById.set(source.id, source);
+        const option = document.createElement('option');
+        option.value = source.id;
+        option.textContent = source.name;
+        select.append(option);
+      });
+      select.value = availableSources.find(source => source.id === 'tdl')?.id || availableSources[0].id;
+      select.disabled = false;
+      fetchAlbums(document.getElementById('search-input').value);
+    } catch (err) {
+      if (!jwtToken) return;
+      select.innerHTML = '<option value="">Fuentes no disponibles</option>';
+      status.textContent = err.message || 'No se pudieron cargar las fuentes de música.';
+      status.classList.remove('hidden');
+    }
+  }
+
+  function searchAlbums(query) {
+    clearTimeout(searchTimeout);
+    if (searchController) searchController.abort();
+    clearAlbumSelection();
+    currentOffset = 0;
+    activeArtist = null;
+    document.getElementById('albums-heading').textContent = 'Álbumes';
+
+    const normalizedQuery = query.trim();
+    if (!normalizedQuery) {
+      document.getElementById('albums-grid').innerHTML =
+              '<p class="text-neutral-500 text-sm col-span-full">Escribe un álbum o artista para buscar.</p>';
+      hidePagination();
+      clearAlbumSelection();
+      return;
+    }
+
+    searchTimeout = setTimeout(() => fetchAlbums(normalizedQuery, 0), 300);
+  }
+
+  function changeSource() {
+    clearAlbumSelection();
+    currentOffset = 0;
+    activeArtist = null;
+    document.getElementById('albums-heading').textContent = 'Álbumes';
+    fetchAlbums(document.getElementById('search-input').value, 0);
+  }
+
+  function changePage(direction) {
+    const nextOffset = currentOffset + direction * pageSize;
+    if (nextOffset < 0) return;
+    fetchAlbums(document.getElementById('search-input').value.trim(), nextOffset);
+  }
+
+  function browseArtistAlbums(artist) {
+    if (!artist?.id) return;
+    activeArtist = artist;
+    currentOffset = 0;
+    document.getElementById('albums-heading').textContent = `Álbumes de ${artist.name || 'artista'}`;
+    clearAlbumSelection();
+    fetchAlbums(document.getElementById('search-input').value.trim(), 0);
+  }
+
+  function hidePagination() {
+    document.getElementById('albums-pagination').classList.add('hidden');
+  }
+
+  function renderPagination(offset, limit, total) {
+    const pagination = document.getElementById('albums-pagination');
+    if (!Number.isInteger(offset) || !Number.isInteger(limit) || !Number.isInteger(total) || total <= limit) {
+      hidePagination();
+      return;
+    }
+
+    const start = offset + 1;
+    const end = Math.min(offset + limit, total);
+    document.getElementById('pagination-summary').textContent = `${start}–${end} de ${total}`;
+    document.getElementById('previous-page').disabled = offset <= 0;
+    document.getElementById('next-page').disabled = offset + limit >= total;
+    pagination.classList.remove('hidden');
+  }
+
+  async function fetchAlbums(query = '', offset = currentOffset) {
+    const grid = document.getElementById('albums-grid');
+    if (!activeArtist && !query.trim()) {
+      grid.innerHTML = '<p class="text-neutral-500 text-sm col-span-full">Escribe un álbum o artista para buscar.</p>';
+      hidePagination();
+      clearAlbumSelection();
+      return;
+    }
+    if (searchController) searchController.abort();
+    grid.innerHTML = '<p class="text-neutral-500 text-sm col-span-full">Cargando catálogo...</p>';
+    searchController = new AbortController();
+
+    try {
+      const source = document.getElementById('source-select').value;
+      if (!source) throw new Error('Selecciona una fuente de música.');
+      const params = new URLSearchParams({ offset: String(offset), limit: String(pageSize) });
+      const endpoint = activeArtist
+              ? `${QMUSIC_URL}/artists/${encodeURIComponent(activeArtist.id)}/albums?${params}`
+              : (() => {
+                params.set('q', query);
+                params.set('source', source);
+                return `${QMUSIC_URL}/search?${params}`;
+              })();
+      const res = await fetch(endpoint, {
+        headers: getAuthHeaders(),
+        signal: searchController.signal
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) throw new Error('Error al buscar álbumes.');
+
+      const data = await res.json();
+      if (!data || !Array.isArray(data.items)) throw new Error('La respuesta de búsqueda no tiene un formato válido.');
+      currentOffset = data.offset;
+      renderAlbums(data.items);
+      renderPagination(data.offset, data.limit, data.total);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        hidePagination();
+        grid.innerHTML = '<p class="text-neutral-500 text-sm col-span-full">No se pudieron obtener los álbumes.</p>';
+      }
+    }
+  }
+
+  function renderAlbums(albums) {
+    const grid = document.getElementById('albums-grid');
+    grid.innerHTML = '';
+
+    if (!albums || albums.length === 0) {
+      grid.innerHTML = '<p class="text-neutral-500 text-sm col-span-full">No se encontraron álbumes.</p>';
+      return;
+    }
+
+    albums.forEach(album => {
+      const card = document.createElement('article');
+      card.className = 'min-w-0 bg-cardbg p-4 rounded-xl hover:bg-hoverbg transition border border-neutral-800/50 cursor-pointer';
+      card.addEventListener('click', event => {
+        if (!event.target.closest('button, a, details')) {
+          openAlbumDetail(album);
+        }
+      });
+
+      const albumButton = document.createElement('button');
+      albumButton.type = 'button';
+      albumButton.className = 'block w-full min-w-0 text-left group cursor-pointer';
+      albumButton.addEventListener('click', () => openAlbumDetail(album));
+
+      const coverBox = document.createElement('div');
+      coverBox.className = 'w-full aspect-square mb-3 relative';
+      if (album.cover) {
+        const image = document.createElement('img');
+        image.src = album.cover;
+        image.alt = album.title || 'Portada del álbum';
+        image.className = 'w-full h-full object-cover rounded-lg';
+        coverBox.append(image);
+      } else {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'w-full h-full bg-neutral-800 rounded-lg flex items-center justify-center text-3xl';
+        placeholder.textContent = '💿';
+        coverBox.append(placeholder);
+      }
+
+      albumButton.className += ' font-bold text-sm truncate text-white group-hover:text-brand transition';
+      albumButton.textContent = album.title || 'Sin título';
+      albumButton.title = album.title || 'Sin título';
+
+      const artistLabel = document.createElement('p');
+      artistLabel.className = 'text-xs text-neutral-400 mt-1 truncate';
+      const releaseYear = album.release ? ` • ${album.release.slice(0, 4)}` : '';
+      artistLabel.append(document.createTextNode(`${album.artist?.name || 'Artista'}${releaseYear}`));
+      if (album.artist?.id) {
+        const artistLink = document.createElement('button');
+        artistLink.type = 'button';
+        artistLink.className = 'text-left text-brand hover:underline';
+        artistLink.textContent = album.artist.name || 'Artista';
+        artistLink.setAttribute('aria-label', `Ver álbumes de ${album.artist.name || 'artista'}`);
+        artistLink.addEventListener('click', () => browseArtistAlbums(album.artist));
+        artistLabel.replaceChildren(artistLink, document.createTextNode(releaseYear));
+      }
+
+      card.append(coverBox, albumButton, artistLabel);
+      const sourceId = album.id?.split(':', 1)[0];
+      if (sourcesById.get(sourceId)?.capabilities?.includes('import')) {
+        const menu = document.createElement('details');
+        menu.setAttribute('data-album-menu', '');
+        menu.className = 'album-actions';
+        const menuToggle = document.createElement('summary');
+        menuToggle.title = 'Opciones del álbum';
+        menuToggle.setAttribute('aria-label', `Opciones de ${album.title || 'álbum'}`);
+        menuToggle.innerHTML = '<svg width="16" height="16" aria-hidden="true" fill="currentColor" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/></svg>';
+        const menuContent = document.createElement('div');
+        menuContent.className = 'album-actions-panel';
+        const importButton = document.createElement('button');
+        importButton.type = 'button';
+        importButton.className = 'album-action';
+        importButton.title = 'Importar álbum';
+        importButton.innerHTML = '<svg aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5"/></svg><span>Importar álbum</span>';
+        importButton.setAttribute('aria-label', `Importar ${album.title || 'álbum'}`);
+
+        const importStatus = document.createElement('p');
+        importStatus.className = 'hidden mt-2 text-xs text-red-400';
+        importStatus.setAttribute('role', 'status');
+        let importStatusTimeout;
+        const importLoader = document.createElement('div');
+        importLoader.className = 'hidden absolute inset-0 rounded-lg bg-black/60 flex items-center justify-center pointer-events-none';
+        importLoader.setAttribute('role', 'status');
+        importLoader.setAttribute('aria-label', 'Solicitando importación...');
+        importLoader.innerHTML = '<span class="w-10 h-10 rounded-full border-4 border-white/30 border-t-brand animate-spin motion-reduce:animate-none" aria-hidden="true"></span>';
+        importButton.addEventListener('click', async () => {
+          menu.open = false;
+          menuToggle.focus();
+          clearTimeout(importStatusTimeout);
+          await importAlbum(album, importButton, importStatus, importLoader);
+          if (!importStatus.classList.contains('hidden')) {
+            importStatusTimeout = setTimeout(() => importStatus.classList.add('hidden'), 5000);
+          }
+        });
+        menuContent.append(importButton);
+        menu.append(menuToggle, menuContent);
+        coverBox.append(importLoader, menu);
+        card.append(importStatus);
+      }
+      grid.append(card);
+    });
+  }
+
+  async function importAlbum(album, button, status, loader) {
+    button.disabled = true;
+    button.querySelector('span').textContent = 'Importando...';
+    button.title = 'Solicitando importación...';
+    button.setAttribute('aria-label', 'Solicitando importación...');
+    button.setAttribute('aria-busy', 'true');
+    status.classList.add('hidden');
+    status.classList.remove('text-brand');
+    status.classList.add('text-red-400');
+    loader.classList.remove('hidden');
+
+    try {
+      const res = await fetch(`${QMUSIC_URL}/albums/${encodeURIComponent(album.id)}/import`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+      if (!res.ok) throw new Error('No se pudo solicitar la importación del álbum.');
+
+      button.title = 'Importación solicitada';
+      button.querySelector('span').textContent = 'Importación solicitada';
+      button.setAttribute('aria-label', 'Importación solicitada');
+      status.textContent = 'Importación solicitada. Se procesará en segundo plano.';
+      status.classList.remove('hidden', 'text-red-400');
+      status.classList.add('text-brand');
+    } catch (err) {
+      button.disabled = false;
+      button.querySelector('span').textContent = 'Importar álbum';
+      button.title = 'Importar álbum';
+      button.setAttribute('aria-label', `Importar ${album.title || 'álbum'}`);
+      status.textContent = err.message || 'No se pudo solicitar la importación del álbum.';
+      status.classList.remove('hidden');
+    } finally {
+      loader.classList.add('hidden');
+      button.setAttribute('aria-busy', 'false');
+    }
+  }
+
+  function clearAlbumSelection() {
+    if (albumController) albumController.abort();
+    document.getElementById('album-detail').classList.add('hidden');
+    document.getElementById('albums-section').classList.remove('hidden');
+    document.getElementById('album-detail-content').replaceChildren();
+    document.getElementById('album-detail-status').classList.add('hidden');
+    const list = document.getElementById('tracks-list');
+    document.getElementById('tracks-heading').innerText = 'Canciones';
+    document.getElementById('reset-filter-btn').classList.add('hidden');
+    list.innerHTML = '<p class="p-4 text-neutral-500 text-sm">Selecciona un álbum para ver sus canciones.</p>';
+  }
+
+  async function openAlbumDetail(album) {
+    if (albumController) albumController.abort();
+    albumController = new AbortController();
+    const { signal } = albumController;
+    const status = document.getElementById('album-detail-status');
+    document.getElementById('albums-section').classList.add('hidden');
+    document.getElementById('album-detail').classList.remove('hidden');
+    renderAlbumDetail(album);
+    status.textContent = 'Cargando detalles del álbum...';
+    status.classList.remove('hidden', 'text-red-400');
+    status.classList.add('text-neutral-400');
+    document.getElementById('album-detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const tracksRequest = fetchTracks(album.id, album.title, signal);
+
+    try {
+      const res = await fetch(`${QMUSIC_URL}/albums/${encodeURIComponent(album.id)}`, {
+        headers: getAuthHeaders(),
+        signal
+      });
+      if (signal.aborted) return;
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(res.status === 404 ? 'No se encontró el álbum.' : 'No se pudieron cargar los detalles del álbum.');
+      }
+      const details = await res.json();
+      if (signal.aborted) return;
+      if (!details || typeof details.id !== 'string') {
+        throw new Error('La respuesta del álbum no tiene un formato válido.');
+      }
+      renderAlbumDetail(details);
+      document.getElementById('tracks-heading').textContent = `Canciones de "${details.title || album.title || ''}"`;
+      status.classList.add('hidden');
+    } catch (err) {
+      if (signal.aborted) return;
+      status.textContent = err.message || 'No se pudieron cargar los detalles del álbum.';
+      status.classList.remove('hidden', 'text-neutral-400');
+      status.classList.add('text-red-400');
+    } finally {
+      await tracksRequest;
+    }
+  }
+
+  function renderAlbumDetail(album) {
+    const content = document.getElementById('album-detail-content');
+    const cover = document.createElement(album.cover ? 'img' : 'div');
+    cover.className = 'w-full sm:w-56 aspect-square object-cover rounded-xl bg-neutral-800 flex-shrink-0 flex items-center justify-center text-6xl';
+    if (album.cover) {
+      cover.src = album.cover;
+      cover.alt = album.title || 'Portada del álbum';
+    } else {
+      cover.textContent = '💿';
+    }
+
+    const info = document.createElement('div');
+    info.className = 'min-w-0 space-y-3 sm:self-end';
+    const title = document.createElement('h2');
+    title.id = 'album-detail-title';
+    title.className = 'text-3xl sm:text-4xl font-bold break-words';
+    title.textContent = album.title || 'Sin título';
+    const artist = document.createElement(album.artist?.id ? 'button' : 'p');
+    artist.className = 'text-lg text-brand';
+    artist.textContent = album.artist?.name || 'Artista desconocido';
+    if (album.artist?.id) {
+      artist.type = 'button';
+      artist.classList.add('hover:underline');
+      artist.setAttribute('aria-label', `Ver álbumes de ${album.artist.name || 'artista'}`);
+      artist.addEventListener('click', () => browseArtistAlbums(album.artist));
+    }
+    info.append(title, artist);
+
+    const metadata = [
+      album.release ? `Lanzamiento: ${album.release}` : null,
+      album.type,
+      album.volumes > 0 ? `${album.volumes} ${album.volumes === 1 ? 'disco' : 'discos'}` : null,
+      sourcesById.get(album.id?.split(':', 1)[0])?.name
+    ].filter(Boolean);
+    if (metadata.length) {
+      const description = document.createElement('p');
+      description.className = 'text-sm text-neutral-400';
+      description.textContent = metadata.join(' • ');
+      info.append(description);
+    }
+    if (Array.isArray(album.tags) && album.tags.length) {
+      const tags = document.createElement('div');
+      tags.className = 'flex flex-wrap gap-2';
+      album.tags.forEach(tag => {
+        const label = document.createElement('span');
+        label.className = 'text-xs px-3 py-1 rounded-full bg-hoverbg text-neutral-300';
+        label.textContent = tag;
+        tags.append(label);
+      });
+      info.append(tags);
+    }
+    if (album.copyright) {
+      const copyright = document.createElement('p');
+      copyright.className = 'text-xs text-neutral-500';
+      copyright.textContent = album.copyright;
+      info.append(copyright);
+    }
+    content.replaceChildren(cover, info);
+  }
+
+  async function fetchTracks(albumId, albumTitle, signal) {
+    const list = document.getElementById('tracks-list');
+    document.getElementById('tracks-heading').innerText = `Canciones de "${albumTitle || ''}"`;
+    document.getElementById('reset-filter-btn').classList.remove('hidden');
+    list.innerHTML = '<p class="p-4 text-neutral-500 text-sm">Cargando pistas...</p>';
+
+    try {
+      const res = await fetch(`${QMUSIC_URL}/albums/${encodeURIComponent(albumId)}/tracks`, {
+        headers: getAuthHeaders(),
+        signal
+      });
+
+      if (signal?.aborted) return;
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+
+      if (!res.ok) throw new Error('Error al cargar canciones.');
+
+      const data = await res.json();
+      if (signal?.aborted) return;
+      if (!data || !Array.isArray(data.tracks)) throw new Error('La respuesta de canciones no tiene un formato válido.');
+      renderTracks(data.tracks);
+    } catch (err) {
+      if (signal?.aborted) return;
+      const error = document.createElement('p');
+      error.className = 'p-4 text-red-400 text-sm';
+      error.setAttribute('role', 'status');
+      error.textContent = err.message || 'Error al cargar canciones.';
+      list.replaceChildren(error);
+    }
+  }
+
+  function renderTracks(tracks) {
+    const list = document.getElementById('tracks-list');
+    list.innerHTML = '';
+
+    if (!tracks || tracks.length === 0) {
+      list.innerHTML = '<p class="p-4 text-neutral-500 text-sm">No se encontraron pistas.</p>';
+      return;
+    }
+
+    tracks.forEach((track, index) => {
+      const duration = track.duration ? formatDuration(track.duration) : '--:--';
+      const row = document.createElement('div');
+      row.className = 'p-4 flex flex-wrap items-center gap-4 hover:bg-hoverbg transition';
+
+      const details = document.createElement('button');
+      details.type = 'button';
+      details.className = 'flex flex-1 min-w-0 items-center gap-4 text-left group';
+      details.addEventListener('click', () => playTrack(track));
+
+      const number = document.createElement('span');
+      number.className = 'text-neutral-500 text-xs w-4 text-right';
+      number.textContent = String(index + 1);
+
+      const text = document.createElement('div');
+      const title = document.createElement('p');
+      title.className = 'font-semibold text-sm text-white group-hover:text-brand transition';
+      title.textContent = track.title || 'Sin título';
+      const album = document.createElement('p');
+      album.className = 'text-xs text-neutral-400';
+      album.textContent = track.album?.title || '';
+      text.append(title, album);
+      details.append(number, text);
+
+      const durationLabel = document.createElement('span');
+      durationLabel.className = 'text-xs text-neutral-500';
+      durationLabel.textContent = duration;
+
+      const downloadButton = document.createElement('button');
+      downloadButton.type = 'button';
+      downloadButton.className = 'text-xs text-brand hover:underline disabled:opacity-50 disabled:cursor-wait';
+      downloadButton.textContent = 'Descargar';
+      downloadButton.setAttribute('aria-label', `Descargar ${track.title || 'canción'}`);
+
+      const queueButton = document.createElement('button');
+      queueButton.type = 'button';
+      queueButton.className = 'text-xs text-neutral-300 hover:text-brand disabled:opacity-50 disabled:cursor-not-allowed';
+      queueButton.setAttribute('aria-label', `Agregar ${track.title || 'canción'} a la cola`);
+      queueButton.addEventListener('click', () => addToQueue(track));
+      updateQueueButton(queueButton, track);
+
+      const downloadStatus = document.createElement('p');
+      downloadStatus.className = 'hidden w-full text-xs text-red-400';
+      downloadStatus.setAttribute('role', 'status');
+      downloadButton.addEventListener('click', () => downloadTrack(track, downloadButton, downloadStatus));
+
+      row.append(details, durationLabel, queueButton, downloadButton, downloadStatus);
+      list.append(row);
+    });
+  }
+
+  async function downloadTrack(track, button, status) {
+    button.disabled = true;
+    button.textContent = 'Descargando...';
+    status.classList.add('hidden');
+
+    try {
+      const detailsResponse = await fetch(`${QMUSIC_URL}/tracks/${encodeURIComponent(track.id)}`, {
+        headers: getAuthHeaders()
+      });
+      if (detailsResponse.status === 401 || detailsResponse.status === 403) {
+        logout();
+        return;
+      }
+      if (!detailsResponse.ok) throw new Error('No se pudieron obtener los detalles de la canción.');
+
+      const details = await detailsResponse.json();
+      const downloadUrl = buildTrackAudioUrl(track.id, details, 'download');
+      const res = await fetch(downloadUrl, {
+        headers: { ...getAuthHeaders(), Accept: 'application/octet-stream' }
+      });
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+      if (!res.ok) throw new Error('No se pudo descargar la canción.');
+
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1]
+              || `${track.title || 'cancion'}.${downloadUrl.searchParams.get('codec') || details.codec || track.codec || 'flac'}`;
+      const objectUrl = URL.createObjectURL(await res.blob());
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+    } catch (err) {
+      status.textContent = err.message || 'No se pudo descargar la canción.';
+      status.classList.remove('hidden');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Descargar';
+    }
+  }
+
+  function isTrackQueued(track) {
+    return playbackQueue.some(queued => String(queued.id) === String(track.id));
+  }
+
+  function updateQueueButton(button, track) {
+    const queued = isTrackQueued(track);
+    button.textContent = queued ? 'En cola' : '+ Cola';
+    button.disabled = queued;
+    button.dataset.queueTrackId = String(track.id);
+  }
+
+  function refreshTrackQueueButtons() {
+    document.querySelectorAll('[data-queue-track-id]').forEach(button => {
+      const queued = playbackQueue.some(track => String(track.id) === button.dataset.queueTrackId);
+      button.textContent = queued ? 'En cola' : '+ Cola';
+      button.disabled = queued;
+    });
+  }
+
+  function addToQueue(track) {
+    if (isTrackQueued(track)) return;
+    playbackQueue.push(track);
+    renderQueue();
+    document.querySelectorAll('[data-queue-track-id]').forEach(button => {
+      if (button.dataset.queueTrackId === String(track.id)) updateQueueButton(button, track);
+    });
+    const status = document.getElementById('queue-status');
+    status.textContent = `${track.title || 'Canción'} agregada a la cola.`;
+    status.classList.remove('hidden');
+  }
+
+  function renderQueue() {
+    const list = document.getElementById('queue-list');
+    const clearButton = document.getElementById('clear-queue-btn');
+    clearButton.disabled = playbackQueue.length === 0;
+    if (playbackQueue.length === 0) {
+      list.innerHTML = '<p class="p-4 text-neutral-500 text-sm">La cola está vacía.</p>';
+      refreshTrackQueueButtons();
+      updatePlayerNavigation();
+      return;
+    }
+
+    list.replaceChildren();
+    playbackQueue.forEach((track, index) => {
+      const current = index === currentQueueIndex;
+      const row = document.createElement('div');
+      row.className = `p-4 flex items-center gap-3 ${current ? 'bg-hoverbg' : ''}`;
+
+      const playButton = document.createElement('button');
+      playButton.type = 'button';
+      playButton.className = 'flex-1 min-w-0 text-left';
+      playButton.setAttribute('aria-current', current ? 'true' : 'false');
+      playButton.addEventListener('click', () => playTrack(track));
+
+      const title = document.createElement('p');
+      title.className = 'font-semibold text-sm text-white truncate';
+      title.textContent = `${index + 1}. ${track.title || 'Sin título'}${current ? ' · Reproduciendo' : ''}`;
+      const album = document.createElement('p');
+      album.className = 'text-xs text-neutral-400 truncate';
+      album.textContent = track.album?.title || '';
+      playButton.append(title, album);
+
+      const moveUpButton = document.createElement('button');
+      moveUpButton.type = 'button';
+      moveUpButton.className = 'text-xs text-neutral-300 hover:text-brand disabled:opacity-40 disabled:cursor-not-allowed';
+      moveUpButton.textContent = '↑';
+      moveUpButton.setAttribute('aria-label', `Mover ${track.title || 'canción'} hacia arriba`);
+      moveUpButton.disabled = index === 0;
+      moveUpButton.addEventListener('click', () => moveQueueItem(index, index - 1));
+
+      const moveDownButton = document.createElement('button');
+      moveDownButton.type = 'button';
+      moveDownButton.className = moveUpButton.className;
+      moveDownButton.textContent = '↓';
+      moveDownButton.setAttribute('aria-label', `Mover ${track.title || 'canción'} hacia abajo`);
+      moveDownButton.disabled = index === playbackQueue.length - 1;
+      moveDownButton.addEventListener('click', () => moveQueueItem(index, index + 1));
+
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'text-xs text-neutral-400 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed';
+      removeButton.textContent = 'Quitar';
+      removeButton.setAttribute('aria-label', `Quitar ${track.title || 'canción'} de la cola`);
+      removeButton.disabled = current;
+      removeButton.addEventListener('click', () => removeFromQueue(index));
+
+      row.append(playButton, moveUpButton, moveDownButton, removeButton);
+      list.append(row);
+    });
+    refreshTrackQueueButtons();
+    updatePlayerNavigation();
+  }
+
+  function moveQueueItem(from, to) {
+    if (to < 0 || to >= playbackQueue.length) return;
+    const currentTrackId = playbackQueue[currentQueueIndex]?.id;
+    const [track] = playbackQueue.splice(from, 1);
+    playbackQueue.splice(to, 0, track);
+    currentQueueIndex = currentTrackId === undefined
+      ? -1
+      : playbackQueue.findIndex(queued => String(queued.id) === String(currentTrackId));
+    renderQueue();
+  }
+
+  function removeFromQueue(index) {
+    if (index === currentQueueIndex) return;
+    playbackQueue.splice(index, 1);
+    if (currentQueueIndex > index) currentQueueIndex--;
+    renderQueue();
+  }
+
+  function clearQueue() {
+    const audio = document.getElementById('audio-element');
+    activePlayRequest++;
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    playbackQueue = [];
+    currentQueueIndex = -1;
+    document.getElementById('player-title').textContent = 'Ninguna canción seleccionada';
+    document.getElementById('player-subtitle').textContent = '-';
+    document.getElementById('player-cover-box').textContent = '🎵';
+    document.getElementById('queue-status').classList.add('hidden');
+    renderQueue();
+  }
+
+  function updatePlayerNavigation() {
+    const audio = document.getElementById('audio-element');
+    const hasCurrent = currentQueueIndex >= 0;
+    document.getElementById('player-previous').disabled =
+      !hasCurrent || (currentQueueIndex === 0 && audio.currentTime <= 3);
+    document.getElementById('player-next').disabled =
+      !hasCurrent || currentQueueIndex >= playbackQueue.length - 1;
+  }
+
+  function playPreviousTrack() {
+    const audio = document.getElementById('audio-element');
+    if (audio.currentTime > 3) {
+      audio.currentTime = 0;
+      return;
+    }
+    if (currentQueueIndex > 0) playTrack(playbackQueue[currentQueueIndex - 1]);
+  }
+
+  function playNextTrack() {
+    if (currentQueueIndex >= 0 && currentQueueIndex < playbackQueue.length - 1) {
+      playTrack(playbackQueue[currentQueueIndex + 1]);
+    }
+  }
+
+  function initializePlayer() {
+    const audio = document.getElementById('audio-element');
+    const toggle = document.getElementById('player-toggle');
+    const progress = document.getElementById('player-progress');
+    const volume = document.getElementById('player-volume');
+    const mute = document.getElementById('player-mute');
+    const subtitle = document.getElementById('player-subtitle');
+    document.getElementById('player-previous').addEventListener('click', playPreviousTrack);
+    document.getElementById('player-next').addEventListener('click', playNextTrack);
+    document.getElementById('clear-queue-btn').addEventListener('click', clearQueue);
+
+    const updatePlayback = () => {
+      const playing = !audio.paused && !audio.ended;
+      toggle.disabled = !audio.getAttribute('src');
+      toggle.setAttribute('aria-label', playing ? 'Pausar' : 'Reproducir');
+      document.getElementById('player-play-icon').classList.toggle('hidden', playing);
+      document.getElementById('player-pause-icon').classList.toggle('hidden', !playing);
+      updatePlayerNavigation();
+    };
+    const updateProgress = () => {
+      const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+      const seekable = audio.seekable;
+      progress.min = seekable.length ? seekable.start(0) : 0;
+      progress.max = seekable.length ? seekable.end(seekable.length - 1) : duration;
+      progress.value = Math.min(Math.max(audio.currentTime, Number(progress.min)), Number(progress.max));
+      progress.disabled = duration <= 0 || audio.seekable.length === 0;
+      progress.setAttribute('aria-valuetext', formatDuration(audio.currentTime));
+      document.getElementById('player-elapsed').textContent = formatDuration(audio.currentTime);
+      document.getElementById('player-duration').textContent = duration > 0 ? formatDuration(duration) : '--:--';
+      updatePlayerNavigation();
+    };
+    toggle.addEventListener('click', async () => {
+      if (!audio.paused) {
+        audio.pause();
+        return;
+      }
+      try {
+        await audio.play();
+      } catch (err) {
+        subtitle.innerText = err.message || 'No se pudo reproducir la canción.';
+      }
+    });
+    progress.addEventListener('input', () => {
+      progress.setAttribute('aria-valuetext', formatDuration(Number(progress.value)));
+      document.getElementById('player-elapsed').textContent = formatDuration(Number(progress.value));
+    });
+    progress.addEventListener('change', () => {
+      if (audio.seekable.length === 0) return;
+      const requestedTime = Number(progress.value);
+      let nearestTime = audio.seekable.start(0);
+      let nearestDistance = Math.abs(requestedTime - nearestTime);
+      for (let i = 0; i < audio.seekable.length; i++) {
+        const start = audio.seekable.start(i);
+        const end = audio.seekable.end(i);
+        if (requestedTime >= start && requestedTime <= end) {
+          nearestTime = requestedTime;
+          break;
+        }
+        for (const boundary of [start, end]) {
+          const distance = Math.abs(requestedTime - boundary);
+          if (distance < nearestDistance) {
+            nearestTime = boundary;
+            nearestDistance = distance;
+          }
+        }
+      }
+      audio.currentTime = nearestTime;
+      updateProgress();
+    });
+    volume.addEventListener('input', () => {
+      audio.volume = Number(volume.value);
+      audio.muted = audio.volume === 0;
+    });
+    mute.addEventListener('click', () => {
+      const muted = audio.muted || audio.volume === 0;
+      if (audio.volume === 0) audio.volume = 1;
+      audio.muted = !muted;
+    });
+    audio.addEventListener('volumechange', () => {
+      const muted = audio.muted || audio.volume === 0;
+      volume.value = audio.muted ? 0 : audio.volume;
+      mute.setAttribute('aria-label', muted ? 'Activar sonido' : 'Silenciar');
+      mute.setAttribute('aria-pressed', String(muted));
+      document.getElementById('player-volume-waves').classList.toggle('hidden', muted);
+      document.getElementById('player-muted-icon').classList.toggle('hidden', !muted);
+    });
+    ['play', 'pause', 'ended', 'emptied', 'loadedmetadata'].forEach(event => {
+      audio.addEventListener(event, updatePlayback);
+    });
+    ['timeupdate', 'durationchange', 'progress', 'loadedmetadata', 'emptied'].forEach(event => {
+      audio.addEventListener(event, updateProgress);
+    });
+    audio.addEventListener('waiting', () => { subtitle.innerText = 'Cargando audio...'; });
+    audio.addEventListener('playing', () => { subtitle.innerText = 'Reproduciendo audio'; });
+    audio.addEventListener('pause', () => { subtitle.innerText = 'En pausa'; });
+    audio.addEventListener('ended', () => {
+      if (currentQueueIndex < playbackQueue.length - 1) {
+        playNextTrack();
+      } else {
+        subtitle.innerText = 'Reproducción finalizada';
+      }
+    });
+    audio.addEventListener('error', () => {
+      subtitle.innerText = 'No se pudo reproducir el audio. Comprueba la conexión y el formato de la canción.';
+      toggle.disabled = true;
+    });
+    updatePlayback();
+    updateProgress();
+    renderQueue();
+  }
+
+  function buildTrackAudioUrl(trackId, details, endpoint) {
+    const stream = details.streams?.find(candidate => candidate.quality === 'LOSSLESS')
+            || details.streams?.[0];
+    if (!stream) throw new Error('No hay una transmisión disponible para esta canción.');
+
+    const url = new URL(`${QMUSIC_URL}/tracks/${encodeURIComponent(trackId)}/${endpoint}`, window.location.origin);
+    if (stream.url) url.search = new URL(stream.url, window.location.origin).search;
+    for (const parameter of ['quality', 'codec', 'presentation']) {
+      if (stream[parameter]) url.searchParams.set(parameter, stream[parameter]);
+    }
+    return url;
+  }
+
+  function renderPlayerCover(album) {
+    const box = document.getElementById('player-cover-box');
+    if (!album?.cover) {
+      box.textContent = '🎵';
+      return;
+    }
+    const image = document.createElement('img');
+    image.alt = album.title || 'Portada del álbum';
+    image.className = 'w-full h-full object-cover';
+    image.addEventListener('error', () => {
+      if (image.parentNode === box) {
+        box.textContent = '🎵';
+        document.getElementById('player-subtitle').innerText = 'No se pudo cargar la portada del álbum.';
+      }
+    }, { once: true });
+    image.src = album.cover;
+    box.replaceChildren(image);
+  }
+
+  async function playTrack(track) {
+    const audio = document.getElementById('audio-element');
+    const subtitle = document.getElementById('player-subtitle');
+    let queueIndex = playbackQueue.findIndex(queued => String(queued.id) === String(track.id));
+    if (queueIndex < 0) {
+      playbackQueue.push(track);
+      queueIndex = playbackQueue.length - 1;
+    }
+    currentQueueIndex = queueIndex;
+    const requestId = ++activePlayRequest;
+    renderQueue();
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    document.getElementById('player-title').innerText = track.title || 'Sin título';
+    subtitle.innerText = 'Cargando audio...';
+    renderPlayerCover(track.album);
+
+    try {
+      const detailsResponse = await fetch(`${QMUSIC_URL}/tracks/${encodeURIComponent(track.id)}`, {
+        headers: getAuthHeaders()
+      });
+      if (requestId !== activePlayRequest) return;
+      if (detailsResponse.status === 401 || detailsResponse.status === 403) {
+        logout();
+        return;
+      }
+      if (!detailsResponse.ok) throw new Error('No se pudieron obtener los detalles de la canción.');
+
+      const details = await detailsResponse.json();
+      if (requestId !== activePlayRequest) return;
+      if (details.album?.cover && details.album.cover !== track.album?.cover) {
+        renderPlayerCover(details.album);
+      }
+      const streamUrl = buildTrackAudioUrl(track.id, details, 'stream');
+
+      audio.src = streamUrl.href;
+      await audio.play();
+      if (requestId !== activePlayRequest) return;
+      subtitle.innerText = 'Reproduciendo audio';
+    } catch (err) {
+      if (requestId === activePlayRequest) {
+        subtitle.innerText = err.message || 'No se pudo reproducir la canción.';
+      }
+    }
+  }
+
+  function formatDuration(seconds) {
+    const min = Math.floor(seconds / 60);
+    const sec = Math.floor(seconds % 60);
+    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+  }
+</script>
+</body>
+</html>

@@ -2,11 +2,12 @@ package quantum.music.providers.tdl;
 
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.Uni;
+import io.smallrye.reactive.messaging.MutinyEmitter;
 import io.vertx.mutiny.core.buffer.Buffer;
-import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.jboss.logging.Logger;
 import quantum.music.domain.PagedResponse;
 import quantum.music.domain.imports.AlbumImportMessage;
@@ -16,6 +17,7 @@ import quantum.music.providers.tdl.services.TdlArtistService;
 import quantum.music.providers.tdl.services.TdlTrackService;
 import quantum.music.providers.tdl.services.TldAlbumService;
 import quantum.music.providers.tdl.services.TldSearchService;
+import quantum.music.utils.Constants;
 
 import java.util.List;
 
@@ -41,7 +43,8 @@ public class TdlMusicProvider implements MusicProvider {
     private TdlArtistService artistService;
 
     @Inject
-    EventBus eventBus;
+    @Channel(Constants.ALBUM_IMPORT_CHANNEL)
+    MutinyEmitter<AlbumImportMessage> albumImports;
 
     @Override
     public String getProviderId() {
@@ -98,13 +101,18 @@ public class TdlMusicProvider implements MusicProvider {
         return Uni.combine().all().unis(getAlbumById(albumId), getTracksByAlbumId(albumId))
                 .asTuple()
                 .onItem().transform(tuple -> new TrackList(tuple.getItem1(), tuple.getItem2().tracks()))
-                .onItem().invoke(trackList -> eventBus.publish("album-import", new AlbumImportMessage(getProviderId(), trackList)))
-                .replaceWithVoid();
+                .onItem().transformToUni(trackList -> albumImports.send(new AlbumImportMessage(getProviderId(), trackList)));
     }
 
     @Override
     public Multi<Buffer> streamTrackById(String trackId, String codec, String quality, String presentation) {
         return trackService.content(trackId, codec, quality, presentation)
                 .onItem().transformToMulti( stream -> trackService.streamFile(stream));
+    }
+
+    @Override
+    public Uni<AudioStream> getTrackStreamUrl(String trackId, String codec, String quality, String presentation) {
+        return trackService.content(trackId, codec, quality, presentation)
+            .onItem().transform(stream -> new AudioStream(stream.urls(), stream.encryption(), stream.keyId()));
     }
 }
