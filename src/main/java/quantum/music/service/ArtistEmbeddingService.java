@@ -37,9 +37,7 @@ public class ArtistEmbeddingService {
 
     /// Embeds artists without vectors in sequence, persisting each vector before moving on.
     public Uni<Long> embedMissingArtists() {
-        return artistRepository.findAll()
-                .stream()
-        //return artistRepository.findWithoutEmbedding()
+        return artistRepository.findWithoutEmbedding()
             .onItem().transformToUniAndConcatenate(artist ->
                 embed(artistText(artist))
                     .onItem().transformToUni(vector -> artistRepository.updateEmbedding(artist.id, vector))
