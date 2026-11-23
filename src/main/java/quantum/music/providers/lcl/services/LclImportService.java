@@ -1,11 +1,11 @@
 package quantum.music.providers.lcl.services;
 
-import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 import org.bson.types.ObjectId;
+import org.eclipse.microprofile.reactive.messaging.Incoming;
 import quantum.music.domain.imports.AlbumImportMessage;
 import quantum.music.domain.local.QAlbum;
 import quantum.music.domain.local.QArtist;
@@ -13,6 +13,7 @@ import quantum.music.domain.local.QSource;
 import quantum.music.domain.local.QTrack;
 import quantum.music.domain.providers.Album;
 import quantum.music.domain.providers.Track;
+import quantum.music.service.ArtistEmbeddingService;
 import quantum.music.repository.AlbumRepository;
 import quantum.music.repository.ArtistRepository;
 
@@ -32,11 +33,14 @@ public class LclImportService {
     @Inject
     ArtistRepository artistRepository;
 
-    @ConsumeEvent("album-import")
+    @Inject
+    ArtistEmbeddingService artistEmbeddingService;
+
+    @Incoming("album-import")
     public Uni<Void> onAlbumImport(AlbumImportMessage message) {
         if (message == null || message.trackList() == null || message.trackList().album() == null) {
             LOG.warn("Album import message missing album payload");
-            return Uni.createFrom().voidItem();
+            return Uni.createFrom().failure(new IllegalArgumentException("Album import message missing album payload"));
         }
         Album album = message.trackList().album();
         String albumId = album.id();
@@ -71,7 +75,7 @@ public class LclImportService {
                     artist.bio = album.artist().bio();
                     artist.nameNormalized = normalized;
                     artist.nameVariations = List.of(artistName);
-                    return artistRepository.persist(artist);
+                    return artistEmbeddingService.embedAndPersist(artist);
                 });
     }
 

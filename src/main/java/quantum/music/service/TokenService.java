@@ -15,6 +15,7 @@ import java.util.function.Supplier;
 @ApplicationScoped
 public class TokenService {
 
+    private static final long TOKEN_EXPIRY_BUFFER_SECONDS = 60;
     public static final String REFRESH_TOKEN_GRANT = "refresh_token";
     public static final String SCOPE = "r_usr+w_usr";
     @Inject
@@ -54,7 +55,7 @@ public class TokenService {
     /// @param <R> The type of the result.
     /// @return A Uni containing the result of the function.
     public <R> Uni<R> withToken(Supplier<Uni<R>> fn) {
-        return getToken().onItem().transformToUni(token -> fn.get());
+        return getToken().onItem().transformToUni( _ -> fn.get());
     }
 
     /// Renews the OAuth2 token using the refresh token.
@@ -64,7 +65,7 @@ public class TokenService {
         return oAuth2Client.renewToken(REFRESH_TOKEN_GRANT, refreshToken, clientId, SCOPE)
             .onItem().transform(token -> {
                 this.currentToken = token.access_token();
-                this.expiresAt = Instant.now().plusSeconds(token.expires_in() - 60);
+                this.expiresAt = Instant.now().plusSeconds(token.expires_in() - TOKEN_EXPIRY_BUFFER_SECONDS);
                 return currentToken;
             });
     }

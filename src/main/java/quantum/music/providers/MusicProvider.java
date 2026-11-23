@@ -95,4 +95,8 @@ public interface MusicProvider {
     /// @param presentation the presentation type (e.g., "full", "preview")
     /// @return a Multi emitting Buffer chunks of the audio stream
     Multi<Buffer> streamTrackById(String trackId, String codec, String quality, String presentation);
+
+    Uni<AudioStream> getTrackStreamUrl(String trackId, String codec, String quality, String presentation);
+
+    record AudioStream(String []urls, String encryption, String keyId) {};
 }

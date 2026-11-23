@@ -1,7 +1,6 @@
 package quantum.music.providers.tdl.stream.http;
 
 import io.smallrye.mutiny.Multi;
-import io.smallrye.mutiny.subscription.MultiEmitter;
 import io.vertx.core.http.RequestOptions;
 import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.core.http.HttpClient;
@@ -26,19 +25,19 @@ public class BasicFileStreamer implements FileStreamer {
 
     @Override
     public Multi<Buffer> stream() {
-        return Multi.createFrom().emitter(emitter -> httpClient.request(options)
-            .onItem().transformToUni(req -> req.send())
-            .subscribe().with(resp -> emit(resp, emitter) , emitter::fail));
+        return httpClient.request(options)
+                .onItem().transformToUni(request -> request.send())
+                .onItem().invoke(HttpClientResponse::pause)
+                .onItem().transformToMulti(BasicFileStreamer::emitBuffers);
     }
 
-    private void emit(HttpClientResponse resp, MultiEmitter<? super Buffer> emitter) {
-        if (resp.statusCode() != 200) {
-            emitter.fail(new WebApplicationException("Failed: " + resp.statusCode(), resp.statusCode()));
-            return;
+    private static Multi<Buffer> emitBuffers(HttpClientResponse response) {
+        if (response.statusCode() != 200) {
+            response.resume();
+            return Multi.createFrom()
+                .failure(new WebApplicationException("Failed: " + response.statusCode(), response.statusCode()));
         }
-        resp.handler(emitter::emit);
-        resp.endHandler(emitter::complete);
-        resp.exceptionHandler(emitter::fail);
+        return response.toMulti();
     }
 
 }

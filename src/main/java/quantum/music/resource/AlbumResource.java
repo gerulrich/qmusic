@@ -122,15 +122,15 @@ public class AlbumResource extends Mapper {
                 .onItem().transform(trackList -> link(getBaseUrl(uriInfo), trackList));
     }
 
-    /// Requests an asynchronous import of an album into the local provider.
+    /// Sends an album import request and waits for the messaging acknowledgment.
     ///
     /// @param id The unique identifier of the album to import
-    /// @return A Uni emitting a 202 Accepted response when queued
+    /// @return A Uni emitting a 202 Accepted response when the message is acknowledged
     @POST
     @Path("/albums/{id}/import")
     @Operation(
             summary = "Import album by ID",
-            description = "Queues an asynchronous import of album metadata into the local provider"
+            description = "Sends album metadata to the import channel and waits for acknowledgment"
     )
     @APIResponses({
             @APIResponse(

@@ -90,5 +90,10 @@ public class LclMusicProvider implements MusicProvider {
         return trackService.streamTrackById(trackId, codec, quality, presentation);
     }
 
+    @Override
+    public Uni<AudioStream> getTrackStreamUrl(String trackId, String codec, String quality, String presentation) {
+        return null;
+    }
+
 
 }
