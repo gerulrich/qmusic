@@ -8,7 +8,7 @@ import quantum.music.repository.ArtistRepository;
 
 import java.util.List;
 
-/// Performs semantic artist searches using locally generated embeddings.
+/// Performs semantic artist searches using OpenAI embeddings.
 @ApplicationScoped
 public class ArtistSearchService {
 

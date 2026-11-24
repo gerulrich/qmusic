@@ -25,8 +25,25 @@ serializacion y las politicas de entrega correspondientes.
 
 ## Busqueda semantica de artistas
 
-El MCP `search_artists` usa el modelo local BGE-small-en cuantizado de
-LangChain4j para generar vectores de 384 dimensiones. Al iniciar, la aplicacion
-calcula y persiste los embeddings faltantes de la coleccion `artists`; los
-artistas importados posteriormente se embeben al guardarse. El indice vectorial
-`artists_vector_index` de MongoDB debe usar la ruta `embedding` y dimension 384.
+El MCP `search_artists` usa el modelo `text-embedding-3-small` de OpenAI,
+solicitando vectores de 384 dimensiones. Configura `OPENAI_API_KEY` en el
+entorno de la aplicacion. Las consultas y los nombres y biografias de artistas
+se envian a OpenAI; las solicitudes requieren acceso a internet y tienen costo.
+Al iniciar, la aplicacion calcula y persiste los embeddings faltantes de la
+coleccion `artists`; los artistas importados posteriormente se embeben al
+guardarse. El indice vectorial `artists_vector_index` de MongoDB debe usar la
+ruta `embedding` y dimension 384.
+
+### Migracion manual desde BGE
+
+Los vectores BGE no son compatibles con OpenAI, aunque ambos tengan 384
+dimensiones. Antes de habilitar la nueva version, detene las importaciones y
+busquedas de artistas y realiza un respaldo de la coleccion. Elimina manualmente
+el campo `embedding` de todos los documentos de `artists`; no borres los demas
+campos. Despliega la nueva version con `OPENAI_API_KEY` configurada. Al iniciar,
+regenerara los vectores faltantes con OpenAI. Comprueba en los logs que la
+regeneracion termino sin errores, que no quedan artistas sin embedding y que
+el indice vectorial termino de actualizarse antes de reanudar el trafico.
+Si falla la regeneracion, corrige el error y reinicia: solo se procesaran los
+vectores que sigan faltando. Restaurar los vectores BGE requiere volver tambien
+a la version anterior de la aplicacion.
